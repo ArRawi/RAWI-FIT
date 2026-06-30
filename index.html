@@ -2869,11 +2869,40 @@ async function pullFromServer(){
 }
 
 // ── Register service worker ──
+// ── Register service worker ──
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
       const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
       console.log('[SW] registered',reg.scope);
+
+      // ── Explicitly check Railway for updates every time the app opens ──
+      reg.update();
+
+      // ── Listen for the new service worker version installing ──
+      reg.onupdatefound = () => {
+        const installingWorker = reg.installing;
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+              console.log('[SW] New update found! Auto-reloading...');
+              // Force a silent refresh to immediately show your changes
+              window.location.reload();
+            }
+          }
+        };
+      };
+
+      // Listen for sync-complete messages from the SW
+      navigator.serviceWorker.addEventListener('message',e=>{
+        if(e.data?.type==='SYNC_COMPLETE'){
+          applyServerData(e.data.data);
+          showBadge('✓ Synced','var(--success)');
+        }
+      });
+
+      // Pull on every page load (if server is reachable)
+      pullFromServer();
 
       // Listen for sync-complete messages from the SW
       navigator.serviceWorker.addEventListener('message',e=>{
