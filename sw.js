@@ -2,7 +2,7 @@
  * Rawi Fit – Service Worker
  * Handles offline caching and background sync.
  */
-const CACHE     = 'rawifit-v1.0.2'; // 
+const CACHE     = 'rawifit-v1.0.3'; // 
 const SYNC_TAG  = 'workout-sync';
 const SYNC_URL  = '/api/sync';
 
