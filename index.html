@@ -101,7 +101,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .hist-date{font-size:13px;font-weight:700}
 .hist-meta{font-size:12px;color:var(--muted);margin-top:2px}
 /* Reviews */
-.review-chips{display:flex;gap:8px;margin-bottom:16px}
+.review-chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .stat-box{background:var(--surface2);border-radius:10px;padding:12px;text-align:center}
 .stat-val{font-size:20px;font-weight:800;color:var(--accent)}
@@ -427,8 +427,11 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   <div class="section-title">Reviews</div>
   <div class="review-chips">
     <button class="chip active" onclick="setReview('today',this)">Today</button>
-    <button class="chip" onclick="setReview('7d',this)">Last 7 Days</button>
-    <button class="chip" onclick="setReview('30d',this)">Last 30 Days</button>
+    <button class="chip" onclick="setReview('7d',this)">7 Days</button>
+    <button class="chip" onclick="setReview('30d',this)">30 Days</button>
+    <button class="chip" onclick="setReview('90d',this)">3 Months</button>
+    <button class="chip" onclick="setReview('180d',this)">6 Months</button>
+    <button class="chip" onclick="setReview('365d',this)">12 Months</button>
   </div>
   <div id="rev-content"></div>
 </div>
@@ -1742,6 +1745,68 @@ function kbToggle(id){
   if(chev)chev.style.transform=open?'rotate(180deg)':'';
 }
 function expTier(exp){return['beginner','novice','intermediate','advanced'].includes(exp)?exp:'intermediate';}
+// Computes today's discipline check against today's actual logged exercises/cardio (Source: Discipline_Guide/*.md)
+function disciplineTodayCheck(key,exs,cardioItems,exp,trainingDays,discKb){
+  exs=exs||[];cardioItems=cardioItems||[];
+  const perSession=([lo,hi])=>[Math.max(1,Math.round(lo/trainingDays)),Math.max(1,Math.round(hi/trainingDays))];
+  switch(key){
+    case'powerlifting':{
+      const sets=exs.reduce((n,e)=>{const k=getStdKey(e.name);return['squat','bench','deadlift'].includes(k)?n+(e.sets||[]).length:n;},0);
+      if(sets===0)return exs.length?{text:'No squat/bench/deadlift logged today — main lifts should anchor most powerlifting sessions.',status:'warn'}:null;
+      const[plo,phi]=perSession(discKb.volumeByExp[exp]);
+      return{text:`Today: ${sets} sets on your main lifts (squat/bench/deadlift) — per-session target ~${plo}–${phi}. ${sets>=plo?'On target ✓.':'A little light — add a set or two next time.'}`,status:sets>=plo?'good':'warn'};
+    }
+    case'strength_training':{
+      const sets=exs.reduce((n,e)=>getStdKey(e.name)?n+(e.sets||[]).length:n,0);
+      if(sets===0)return exs.length?{text:'No compound lift (squat/bench/deadlift/OHP) logged today — these should anchor your session.',status:'warn'}:null;
+      const[plo,phi]=perSession(discKb.volumeByExp[exp]);
+      return{text:`Today: ${sets} sets on compound lifts — per-session target ~${plo}–${phi}. ${sets>=plo?'On target ✓.':'A little light — add a set or two next time.'}`,status:sets>=plo?'good':'warn'};
+    }
+    case'bodybuilding':{
+      const sets=exs.reduce((n,e)=>n+(e.sets||[]).length,0);
+      if(sets===0)return null;
+      const[plo,phi]=perSession(discKb.volumeByExp[exp]);
+      return{text:`Today: ${sets} sets logged — per-session target ~${plo}–${phi} for hypertrophy volume. ${sets>=plo?'On target ✓.':'A little light — add 1–2 sets to a lagging muscle group.'}`,status:sets>=plo?'good':'warn'};
+    }
+    case'olympic_weightlifting':{
+      const reps=exs.reduce((n,e)=>n+(e.sets||[]).reduce((m,s)=>m+(+s.reps||0),0),0);
+      if(reps===0)return null;
+      return{text:`Today: ${reps} total reps logged on lifts — technical work target is 15–25 reps/session at 60–85% 1RM. ${reps>=15?'On target ✓.':'A bit light on technical volume today.'}`,status:reps>=15?'good':'ok'};
+    }
+    case'calisthenics':{
+      const sets=exs.filter(e=>e.bw).reduce((n,e)=>n+(e.sets||[]).length,0);
+      if(sets===0)return exs.length?{text:'No bodyweight/skill sets logged today — log holds, negatives, or progressions to track skill work.',status:'ok'}:null;
+      return{text:`Today: ${sets} bodyweight/skill sets logged. Track hold times and rep PBs to know when you're ready to progress.`,status:'good'};
+    }
+    case'running':{
+      const dist=cardioItems.filter(i=>i.cardioType==='run').reduce((n,i)=>n+(parseFloat(i.data?.distance)||0),0);
+      if(dist===0)return null;
+      return{text:`Today: ${dist.toFixed(1)} km logged. Keep this at an easy Zone 1–2 effort unless this was your scheduled threshold/VO2 session.`,status:'good'};
+    }
+    case'swimming':{
+      const n=cardioItems.filter(i=>i.cardioType==='swimming').length;
+      if(!n)return null;
+      return{text:'Swim session logged today. Make sure 70–80% of your weekly volume stays easy (Zone 1–2) with drill work mixed in.',status:'good'};
+    }
+    case'cycling':{
+      const n=cardioItems.filter(i=>i.cardioType==='cycling').length;
+      if(!n)return null;
+      return{text:'Ride logged today. Keep the 80/20 split — most rides easy (Zone 1–2), hard intervals capped at 1–2×/week.',status:'good'};
+    }
+    case'crossfit':{
+      if(!exs.length&&!cardioItems.length)return null;
+      return{text:'Session logged today. Keep training to a maximum of 5 days/week with 2 complete rest days, and don\'t sacrifice form for speed.',status:'good'};
+    }
+    case'general_fitness':
+    default:{
+      if(!exs.length&&!cardioItems.length)return null;
+      const covered=[];
+      if(exs.length)covered.push('resistance');
+      if(cardioItems.length)covered.push('cardio');
+      return{text:`Today covered ${covered.join(' + ')} — WHO guidelines target 150–300 min/week cardio plus 2–3 resistance sessions/week.`,status:'good'};
+    }
+  }
+}
 // Builds the 5-section knowledge-base review card. w may be null (no session logged) or a rest day.
 function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   const goalKey=GOAL_KB[prof.goal]?prof.goal:null;
@@ -1791,8 +1856,12 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   }
 
   // ── Section 3: Discipline-Specific Guidance ──
-  const volLine=discKb.volumeByExp?`Volume target: ${discKb.volumeByExp[exp].join('–')} ${discKb.unit}.`:`Target: ${discKb.unit}.`;
+  const volLine=discKb.volumeByExp?`Weekly volume target: ${discKb.volumeByExp[exp].join('–')} ${discKb.unit}.`:`Target: ${discKb.unit}.`;
+  const todayCheck=hasSession?disciplineTodayCheck(primary,exs,cardioItems,exp,trainingDays,discKb):null;
+  const s3Status=todayCheck?todayCheck.status:'ok';
+  const todayLine=todayCheck?`<p>${todayCheck.text}</p>`:hasSession?`<p>Nothing directly tied to ${discName} in today's log — the weekly target below still applies.</p>`:`<p>No session logged today yet — here's what to aim for once you train.</p>`;
   const s3=`<p><strong>Primary focus: ${discName}.</strong>${secondary.length?` Secondary: ${secondary.map(k=>DISCIPLINES[k]?.name||k).join(', ')}.`:''}</p>
+    ${todayLine}
     <p>${volLine} ${discKb.rest}.</p>
     <p>${discKb.nextStep}</p>`;
 
@@ -1807,7 +1876,7 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   return `<div class="kb-wrap">
     ${kbSection(`kb1-${uid}`,'⚡','Immediate Feedback',kbColorClass(s1Status),s1,null)}
     ${kbSection(`kb2-${uid}`,'🎯',`Goal Analysis — ${GOAL_LABELS_KB[prof.goal]||'General Fitness'}`,kbColorClass(s2Status),s2,goalKb.file||GOAL_KB_FALLBACK.file)}
-    ${kbSection(`kb3-${uid}`,'🏋️',`Discipline Guidance — ${discName}`,'kb-ok',s3,discKb.file)}
+    ${kbSection(`kb3-${uid}`,'🏋️',`Discipline Guidance — ${discName}`,kbColorClass(s3Status),s3,discKb.file)}
     ${kbSection(`kb4-${uid}`,'🧬','Physiological Insight','kb-good',s4,physioKb.file)}
     ${kbSection(`kb5-${uid}`,'✅','Actionable Next Steps','kb-good',s5,null)}
   </div>`;
@@ -1929,8 +1998,10 @@ function renderReview(){
     el.innerHTML=html;return;
   }
 
-  // ── 7d / 30d ──
-  const days=currentReviewPeriod==='7d'?7:30;
+  // ── 7d / 30d / 90d / 180d / 365d ──
+  const PERIOD_DAYS={'7d':7,'30d':30,'90d':90,'180d':180,'365d':365};
+  const PERIOD_LABELS={'7d':'Last 7 Days','30d':'Last 30 Days','90d':'Last 3 Months','180d':'Last 6 Months','365d':'Last 12 Months'};
+  const days=PERIOD_DAYS[currentReviewPeriod]||30;
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-days);
   const cutoffStr=cutoff.toISOString().slice(0,10);
   const periodWs=Object.entries(ws).filter(([d])=>d>=cutoffStr);
