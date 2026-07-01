@@ -1,0 +1,11 @@
+{
+  "name": "rawi-fit",
+  "version": "1.0.3",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
