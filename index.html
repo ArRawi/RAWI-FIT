@@ -385,12 +385,6 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
     <textarea id="session-notes" placeholder="How did it feel? Any PRs?" oninput="saveNotes()"></textarea>
   </div>
 
-  <!-- AI Review Section -->
-  <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-    <button class="btn btn-primary btn-block" onclick="getAIReview(this)" id="ai-review-btn">🤖 Get AI Review</button>
-    <div id="ai-review-content" style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;display:none"></div>
-  </div>
-
   <div id="autosave-bar" style="text-align:center;font-size:12px;color:var(--muted);padding:6px 0;opacity:0;transition:opacity .35s">✓ Autosaved</div>
 </div>
 
@@ -1313,45 +1307,6 @@ function autoSave(){
   const bar=document.getElementById('autosave-bar');
   if(bar){bar.textContent='Saved';bar.style.color='';bar.style.opacity='1';clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>bar.style.opacity='0',1400);}
   queueSync();
-}
-
-// ─── AI Review via Replicate ─────────────────────────────────────────────
-// Additive to generateReview() — see CLAUDE.md accountability note.
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-async function getAIReview(btn){
-  const profile=rwGet('rw_profile');
-  if(!profile){alert('Profile not set up yet');return;}
-
-  const activeDate=S.editDate||todayStr();
-  const ws=getWorkouts();
-  const workout=ws[activeDate];
-  if(!workout){alert('No workout logged for this date');return;}
-
-  if(btn){btn.disabled=true;btn.textContent='Generating...';}
-
-  try{
-    const res=await fetch('/api/review',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({workout,profile}),
-    });
-    const data=await res.json();
-    if(data.error){
-      alert('Error: '+data.error);
-    }else{
-      const reviewEl=document.getElementById('ai-review-content');
-      if(reviewEl){
-        reviewEl.style.display='block';
-        reviewEl.innerHTML=`<div style="white-space:pre-wrap;line-height:1.6;font-size:14px;">${escapeHtml(data.feedback)}</div>`;
-      }
-    }
-  }catch(err){
-    alert('Failed to get review: '+err.message);
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='🤖 Get AI Review';}
-  }
 }
 
 // ─── Modal helpers ─────────────────────────────────────────────────────
