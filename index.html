@@ -126,20 +126,21 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .fb-item{padding:10px 12px;background:var(--surface2);border-radius:10px;margin-bottom:8px;font-size:13px;line-height:1.5;border-left:3px solid var(--accent)}
 .fb-item.warn{border-left-color:var(--accent3)}
 .fb-item.good{border-left-color:var(--success)}
-/* Knowledge-base review sections */
-.kb-wrap{margin-top:14px}
-.kb-section{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
-.kb-head{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;background:var(--surface2);border-left:4px solid var(--muted)}
+/* Knowledge-base review sections — the 5 primary, equally-weighted review sections */
+.kb-wrap{margin-top:2px;display:flex;flex-direction:column;gap:6px}
+.kb-section{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.kb-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:var(--surface2);border-left:4px solid var(--muted)}
 .kb-head.kb-good{border-left-color:var(--success)}
 .kb-head.kb-ok{border-left-color:#eab308}
 .kb-head.kb-warn{border-left-color:var(--accent3)}
 .kb-head.kb-risk{border-left-color:var(--red)}
-.kb-icon{font-size:16px}
-.kb-title{flex:1;font-size:13px;font-weight:700}
-.kb-chev{font-size:12px;color:var(--muted);transition:transform .2s}
-.kb-body{padding:12px 14px;font-size:13px;line-height:1.6}
-.kb-body p{margin:0 0 8px}
-.kb-body ol,.kb-body ul{margin:0 0 8px;padding-left:18px}
+.kb-icon{font-size:18px;flex-shrink:0}
+.kb-title{flex:1;font-size:14px;font-weight:700}
+.kb-chev{font-size:12px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.kb-body{padding:4px 14px 12px}
+.kb-body p{margin:0 0 8px;font-size:13px;line-height:1.6}
+.kb-body ol,.kb-body ul{margin:0 0 8px;padding-left:18px;font-size:13px;line-height:1.6}
+.kb-body li{margin-bottom:4px}
 .kb-cite{font-size:11px;color:var(--muted);margin-top:6px}
 /* Misc */
 .section-title{font-size:18px;font-weight:800;margin-bottom:14px}
@@ -1699,6 +1700,12 @@ const GOAL_KB={
 };
 // Fallback for goals without a dedicated training_goals file (general_health, calisthenics, recomp)
 const GOAL_KB_FALLBACK={file:'health_guidelines_reference.md',nextStep:'Meet the WHO minimum of 150 min moderate cardio + 2 resistance sessions/week — consistency matters more than any single session.'};
+// Goals without a dedicated training_goals_*.md file still get a specific narrative instead of the generic WHO fallback
+const GOAL_NARRATIVE={
+  general_health:'General health goal: meet WHO minimums — 150 min moderate or 75 min vigorous cardio/week + 2 resistance sessions. You\'re building a foundation for lifelong health.',
+  calisthenics:'Calisthenics goal: progress via harder variations (e.g. push-up → archer push-up → one-arm). Track max reps and skill milestones. 3–5 sessions/week with full recovery between skill work.',
+  recomp:'Body recomp: eat at maintenance, keep protein high (2+ g/kg). Recomp is slow — track strength gains and body measurements monthly, not weekly.'
+};
 
 // ─── Knowledge Base: Physiological "why it matters" insights ────────────
 // Source: knowledge_base/physiological/*.md
@@ -1853,7 +1860,7 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   } else if(goalKey){
     s2=`<p>Goal target: ${goalKb.repLabel||'see goal guidance'}. Log a resistance session to get a volume/rep-range check against your ${GOAL_LABELS_KB[goalKey]} target.</p>`;
   } else {
-    s2=`<p>${GOAL_KB_FALLBACK.nextStep}</p>`;
+    s2=`<p>${GOAL_NARRATIVE[prof.goal]||GOAL_KB_FALLBACK.nextStep}</p>`;
   }
 
   // ── Section 3: Discipline-Specific Guidance ──
@@ -1870,7 +1877,7 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   const s4=`<p>${physioKb.insight}</p>`;
 
   // ── Section 5: Actionable Next Steps ──
-  const steps=[goalKb.nextStep||GOAL_KB_FALLBACK.nextStep,discKb.nextStep,'Prioritise 7–9 hours of sleep tonight — recovery is where the adaptation actually happens.'];
+  const steps=[GOAL_NARRATIVE[prof.goal]||goalKb.nextStep,discKb.nextStep,'Prioritise 7–9 hours of sleep tonight — recovery is where the adaptation actually happens.'];
   const s5=`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
 
   const uid=Math.random().toString(36).slice(2,8);
@@ -1883,9 +1890,13 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
   </div>`;
 }
 // Same 5-section knowledge-base card as buildKnowledgeReview, aggregated over a multi-day review period
-// instead of a single day's log. stats: {gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget}.
+// instead of a single day's log — this is the PRIMARY content of the period review (Ticket 6): the old
+// separate "Period Summary" and "Program" cards are consolidated into these sections rather than shown
+// as their own cards. stats: {gymDays,cardioDays,restDays,periodWs,totalSetsAll,periodExs,totalActive,
+// periodTarget,targetDays,prevActive,patternFeedback,assignedProgram,programTip,experienceTip}.
 function buildKnowledgeReviewPeriod(prof,stats,days,periodLabel){
-  const{gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget}=stats;
+  const{gymDays,cardioDays,restDays,periodWs,totalSetsAll,periodExs,totalActive,periodTarget,targetDays,
+    prevActive,patternFeedback,assignedProgram,programTip,experienceTip}=stats;
   const goalKey=GOAL_KB[prof.goal]?prof.goal:null;
   const goalKb=goalKey?GOAL_KB[goalKey]:GOAL_KB_FALLBACK;
   const physioKb=goalKey&&PHYSIO_KB[goalKey]?PHYSIO_KB[goalKey]:PHYSIO_KB_FALLBACK;
@@ -1895,11 +1906,15 @@ function buildKnowledgeReviewPeriod(prof,stats,days,periodLabel){
   const exp=expTier(prof.experience);
   const pLabel=periodLabel.toLowerCase();
 
-  // ── Section 1: Period Feedback ──
+  // ── Section 1: Period Feedback (consolidates the old "Period Summary" stat card) ──
   const s1Status=totalActive===0?'warn':totalActive>=periodTarget*0.7?'good':'ok';
+  const trendLine=prevActive===totalActive?` You logged the same number of sessions in the previous period (${prevActive}) — consistency is holding steady.`
+    :prevActive<totalActive?` That's up from ${prevActive} in the previous period — good momentum.`
+    :` That's down from ${prevActive} in the previous period — worth a look at what changed.`;
   const s1=totalActive===0
-    ?`<p>No sessions logged in ${pLabel} — here's guidance based on your goal and training profile to help you get started.</p>`
-    :`<p><strong>${totalActive} session${totalActive>1?'s':''}</strong> logged in ${pLabel} (target ~${periodTarget}). ${totalActive>=periodTarget*0.7?'Good consistency ✓.':'A bit behind pace — closing this gap is the highest-leverage change you can make.'}</p>`;
+    ?`<p>No sessions logged in ${pLabel} — here's guidance based on your goal (${GOAL_LABELS_KB[prof.goal]||'General Fitness'}, ${targetDays} days/week target) to help you get started.</p>`
+    :`<p>You logged <strong>${totalActive} session${totalActive>1?'s':''}</strong> in ${pLabel} — ${gymDays.length} gym, ${cardioDays.length} cardio, ${restDays.length} rest day${restDays.length===1?'':'s'} (${periodWs.length} entries total). Target is ~${periodTarget} sessions for your ${targetDays} days/week goal.${trendLine}</p>`;
+  const patternHtml=(patternFeedback||[]).map(f=>`<p>${f.msg}</p>`).join('');
 
   // ── Section 2: Goal-Specific Analysis ──
   let s2,s2Status='ok';
@@ -1917,8 +1932,9 @@ function buildKnowledgeReviewPeriod(prof,stats,days,periodLabel){
   } else if(goalKey){
     s2=`<p>No resistance sessions logged in ${pLabel} to check against your ${GOAL_LABELS_KB[goalKey]} volume target${goalKb.volumeByExp?` (${goalKb.volumeByExp[exp].join('–')} sets/muscle/week)`:''}.</p>`;
   } else {
-    s2=`<p>${GOAL_KB_FALLBACK.nextStep}</p>`;
+    s2=`<p>${GOAL_NARRATIVE[prof.goal]||GOAL_KB_FALLBACK.nextStep}</p>`;
   }
+  s2+=`<p>Assigned program: <strong>${assignedProgram}</strong>${GOAL_LABELS_KB[prof.goal]?` for your ${GOAL_LABELS_KB[prof.goal]} goal`:''}.</p>`;
 
   // ── Section 3: Discipline-Specific Guidance ──
   const df=disciplineFeedback(primary,{gymDays,cardioDays,totalSetsAll,exs:periodExs,days});
@@ -1926,22 +1942,21 @@ function buildKnowledgeReviewPeriod(prof,stats,days,periodLabel){
   const volLine=discKb.volumeByExp?`Weekly volume target: ${discKb.volumeByExp[exp].join('–')} ${discKb.unit}.`:`Target: ${discKb.unit}.`;
   const s3=`<p><strong>Primary focus: ${discName}.</strong>${secondary.length?` Secondary: ${secondary.map(k=>DISCIPLINES[k]?.name||k).join(', ')}.`:''}</p>
     <p>${df?df.msg:`Not enough ${discName}-specific data logged in ${pLabel} yet.`}</p>
-    <p>${volLine} ${discKb.rest}.</p>
-    <p>${discKb.nextStep}</p>`;
+    <p>${volLine} ${discKb.rest}.</p>`;
 
   // ── Section 4: Physiological Insight ──
   const s4=`<p>${physioKb.insight}</p>`;
 
-  // ── Section 5: Actionable Next Steps ──
-  const steps=[goalKb.nextStep||GOAL_KB_FALLBACK.nextStep,discKb.nextStep,'Prioritise 7–9 hours of sleep most nights — recovery is where the adaptation actually happens.'];
-  const s5=`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+  // ── Section 5: Actionable Next Steps (consolidates the old "Program" tip — highest priority first) ──
+  const steps=[programTip,GOAL_NARRATIVE[prof.goal]||goalKb.nextStep,discKb.nextStep].filter(Boolean).slice(0,3);
+  const s5=`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>${experienceTip?`<p class="text-muted text-sm">${experienceTip}</p>`:''}`;
 
   const uid=Math.random().toString(36).slice(2,8);
   return `<div class="kb-wrap">
-    ${kbSection(`kbp1-${uid}`,'⚡','Period Feedback',kbColorClass(s1Status),s1,null)}
+    ${kbSection(`kbp1-${uid}`,'🔥','Period Feedback',kbColorClass(s1Status),s1+patternHtml,null)}
     ${kbSection(`kbp2-${uid}`,'🎯',`Goal Analysis — ${GOAL_LABELS_KB[prof.goal]||'General Fitness'}`,kbColorClass(s2Status),s2,goalKb.file||GOAL_KB_FALLBACK.file)}
-    ${kbSection(`kbp3-${uid}`,'🏋️',`Discipline Guidance — ${discName}`,kbColorClass(s3Status),s3,discKb.file)}
-    ${kbSection(`kbp4-${uid}`,'🧬','Physiological Insight','kb-good',s4,physioKb.file)}
+    ${kbSection(`kbp3-${uid}`,'⚡',`Discipline Guidance — ${discName}`,kbColorClass(s3Status),s3,discKb.file)}
+    ${kbSection(`kbp4-${uid}`,'🧠','Physiological Insight','kb-good',s4,physioKb.file)}
     ${kbSection(`kbp5-${uid}`,'✅','Actionable Next Steps','kb-good',s5,null)}
   </div>`;
 }
@@ -1967,14 +1982,14 @@ function renderReview(){
     const rawToday=ws[todayStr()];
     const w=rawToday?normalizeWorkout(rawToday):null;
     if(!w){html=`<div class="card"><div class="empty-state"><div class="ei">📝</div>No session logged today</div></div>
-      <div class="card">${buildKnowledgeReview(prof,null,[],[],0)}</div>`}
+      ${buildKnowledgeReview(prof,null,[],[],0)}`}
     else if(w.type==='rest'){
       html=`<div class="card"><div class="card-title">Today — Rest Day</div>
         <div class="stat-box" style="text-align:left;padding:14px">Recovery feeling: <strong>${w.recovery||'—'}</strong></div>
         <div class="fb-item good mt8">Active Recovery Tip: Light Zone 1 activity (walk, gentle stretch) beats complete inactivity — promotes blood flow and reduces DOMS without adding training stress.</div>
         ${w.notes?`<div class="mt8 text-muted">${w.notes}</div>`:''}
       </div>
-      <div class="card">${buildKnowledgeReview(prof,w,[],[],0)}</div>`;
+      ${buildKnowledgeReview(prof,w,[],[],0)}`;
     } else {
       const mhr=prof.mhr||(prof.age?Math.round(208-0.7*prof.age):latest?Math.round(208-0.7*latest.age):190);
       const hz=prof.hr_zones||null;
@@ -2057,7 +2072,7 @@ function renderReview(){
         ${w.notes?`<div class="mt8 text-muted">${w.notes}</div>`:''}
         ${!(w.items||[]).length?'<div class="empty-state"><div class="ei">📝</div>No exercises logged yet</div>':''}
       </div>
-      <div class="card">${buildKnowledgeReview(prof,w,exs,cardioItems,totalVol)}</div>`;
+      ${buildKnowledgeReview(prof,w,exs,cardioItems,totalVol)}`;
     }
     el.innerHTML=html;return;
   }
@@ -2070,6 +2085,11 @@ function renderReview(){
   const cutoffStr=cutoff.toISOString().slice(0,10);
   const periodWs=Object.entries(ws).filter(([d])=>d>=cutoffStr);
   const normPeriodWs=periodWs.map(([d,w])=>[d,normalizeWorkout(w)]);
+  // Previous period (same length, immediately before this one) — used for the trend comparison in Period Feedback
+  const prevCutoff=new Date(cutoff);prevCutoff.setDate(prevCutoff.getDate()-days);
+  const prevCutoffStr=prevCutoff.toISOString().slice(0,10);
+  const prevPeriodWs=Object.entries(ws).filter(([d])=>d>=prevCutoffStr&&d<cutoffStr).map(([,w])=>normalizeWorkout(w));
+  const prevActive=prevPeriodWs.filter(v=>v.type!=='rest'&&(v.items||[]).length).length;
   const gymDays=normPeriodWs.filter(([,v])=>v.type!=='rest'&&(v.items||[]).some(i=>i.kind==='lift'));
   const pushDays=normPeriodWs.filter(([,v])=>(v.items||[]).some(i=>i.kind==='lift'&&i.cat==='push'));
   const pullDays=normPeriodWs.filter(([,v])=>(v.items||[]).some(i=>i.kind==='lift'&&i.cat==='pull'));
@@ -2187,19 +2207,17 @@ function renderReview(){
   const feedback=[];
   const safeProtMin=prof.protein_target?Math.round(prof.protein_target*0.8):Math.round((prof.weight_kg||70)*1.6);
 
-  // Consistency
-  if(gymDays.length===0&&cardioDays.length===0){
-    feedback.push({msg:'No workouts logged in this period. Consistency is the single most important factor in long-term progress. Start small.',cls:'warn'});
-  } else if(gymDays.length+cardioDays.length>=days*0.6){
-    feedback.push({msg:`Excellent consistency — ${gymDays.length+cardioDays.length} sessions in ${days} days. Progressive overload compounds over time only with regular training.`,cls:'good'});
-  }
+  // Consistency and session-count-vs-target are already stated in Period Feedback's consolidated
+  // summary sentence (s1 in buildKnowledgeReviewPeriod) — not repeated here to avoid saying the same
+  // thing twice on the page.
 
-  // WHO compliance + personal training_days target
+  // WHO compliance — the sessions-vs-target stat itself is already stated in Period Feedback's
+  // consolidated summary sentence (s1 in buildKnowledgeReviewPeriod), so only add this when it
+  // conveys something s1 doesn't: the resistance-specific minimum.
   const targetDays=prof.training_days||3;
   const periodTarget=Math.round(targetDays*(days/7));
   const totalActive=gymDays.length+cardioDays.length;
-  if(totalActive<periodTarget*0.7){feedback.push({msg:`You hit ${totalActive} sessions vs your target of ~${periodTarget} for this period (your goal: ${targetDays} days/week). Closing this gap is the single highest-leverage change you can make.`,cls:totalActive===0?'warn':''});}
-  else if(gymDays.length<2){feedback.push({msg:`WHO/ACSM recommend ≥ 2 resistance sessions/week. You logged ${gymDays.length} gym session(s) this period. Muscle preservation requires regular mechanical loading.`,cls:gymDays.length===0?'warn':''});}
+  if(totalActive>=periodTarget*0.7&&gymDays.length<2){feedback.push({msg:`WHO/ACSM recommend ≥ 2 resistance sessions/week. You logged ${gymDays.length} gym session(s) this period. Muscle preservation requires regular mechanical loading.`,cls:gymDays.length===0?'warn':''});}
 
   // Overtraining detection — threshold adjusted for experience (Source: injury_prevention_and_common_mistakes.md)
   const d7ago=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
@@ -2225,31 +2243,17 @@ function renderReview(){
     }
   }
 
-  // Goal-based training feedback (Source: goal_programs.md + health_guidelines_reference.md)
+  // totalSetsAll feeds the Goal Analysis section of the knowledge-base card below — the old
+  // per-goal narrative text that used to live here has been consolidated into that section
+  // (Source: goal_programs.md + health_guidelines_reference.md) to avoid repeating the same
+  // guidance twice on the page.
   const totalSetsAll=gymDays.reduce((n,[,v])=>n+(v.items||[]).filter(i=>i.kind==='lift').reduce((m,e)=>m+(e.sets||[]).length,0),0);
-  if(goalKey==='hypertrophy'){
-    const targetSetsP=Math.round((days/7)*10);
-    if(totalSetsAll<targetSetsP)feedback.push({msg:`Volume check: ${totalSetsAll} total sets over ${days} days. Hypertrophy targets 10–20 sets/muscle/week (ACSM). Add more working sets or sessions.`,cls:'warn'});
-    else feedback.push({msg:`Hypertrophy goal: ${totalSetsAll} sets logged. Target 6–15 reps with progressive overload — increase load when you complete all sets at the top of your rep range.`,cls:''});
-  } else if(goalKey==='strength'){
-    feedback.push({msg:'Strength goal: 1–6 reps on compound lifts (Squat, Deadlift, Bench, OHP) with 3–5 min rest. Apply linear progression (+2.5 kg upper / +5 kg lower per session). When you stall, switch to weekly wave progression.',cls:''});
-  } else if(goalKey==='fat_loss'){
-    feedback.push({msg:`Fat loss goal: preserve muscle with ≥ 2 resistance sessions/week. High protein (${safeProtMin}g+/day) is essential to prevent muscle loss in a deficit. Keep training intensity high even while reducing calories.`,cls:''});
-  } else if(goalKey==='endurance'){
-    feedback.push({msg:'Endurance goal: 80% of cardio in Zone 1–2. Add 1 Zone 4 interval session/week for VO₂ max gains. Keep 2 resistance sessions/week to prevent muscle atrophy.',cls:''});
-  } else if(goalKey==='general_health'){
-    feedback.push({msg:'General health goal: meet WHO minimums — 150 min moderate or 75 min vigorous cardio/week + 2 resistance sessions. You\'re building a foundation for lifelong health.',cls:''});
-  } else if(goalKey==='calisthenics'){
-    feedback.push({msg:'Calisthenics goal: progress via harder variations (e.g. push-up → archer push-up → one-arm). Track max reps and skill milestones. 3–5 sessions/week with full recovery between skill work.',cls:''});
-  } else if(goalKey==='recomp'){
-    feedback.push({msg:'Body recomp: eat at maintenance, keep protein high (2+ g/kg). Recomp is slow — track strength gains and body measurements monthly, not weekly.',cls:''});
-  }
-  // Experience-level feedback (Source: progress_metrics_and_benchmarks.md)
-  if(exp==='beginner'||exp==='novice'){
-    feedback.push({msg:`${exp==='beginner'?'Beginner':'Novice'} tip: focus on consistent form and frequency before chasing heavier weights. Linear progression (adding weight every session) is still your fastest route to gains at this stage.`,cls:''});
-  } else if(exp==='advanced'){
-    feedback.push({msg:'Advanced lifter: linear gains have slowed — focus on periodisation (wave loading, deload weeks), exercise variation, and sleep/nutrition optimisation. Those are the levers left.',cls:''});
-  }
+  // Experience-level tip — folded into the knowledge-base card's Actionable Next Steps (Source: progress_metrics_and_benchmarks.md)
+  const experienceTip=exp==='beginner'||exp==='novice'
+    ?`${exp==='beginner'?'Beginner':'Novice'} tip: focus on consistent form and frequency before chasing heavier weights — linear progression is still your fastest route to gains at this stage.`
+    :exp==='advanced'
+    ?'Advanced lifter: linear gains have slowed — focus on periodisation (wave loading, deload weeks) and exercise variation. Those are the levers left.'
+    :null;
 
   // Recovery / soreness
   const soreCount=restDays.filter(([,v])=>v.recovery==='sore').length;
@@ -2274,24 +2278,12 @@ function renderReview(){
   // Period exercises used by the discipline-specific knowledge-base card below (Source: training_disciplines.md)
   const periodExs=gymDays.flatMap(([,v])=>(v.items||[]).filter(i=>i.kind==='lift'));
 
-  const summary=`<div class="card">
-    <div class="card-title">Period Summary · ${days} Days</div>
-    <div class="stat-grid">
-      <div class="stat-box"><div class="stat-val">${gymDays.length}</div><div class="stat-lbl">Gym Sessions</div></div>
-      <div class="stat-box"><div class="stat-val">${cardioDays.length}</div><div class="stat-lbl">Cardio Sessions</div></div>
-      <div class="stat-box"><div class="stat-val">${restDays.length}</div><div class="stat-lbl">Rest Days</div></div>
-      <div class="stat-box"><div class="stat-val">${periodWs.length}</div><div class="stat-lbl">Total Logged</div></div>
-    </div>
-    ${feedback.map(f=>`<div class="fb-item ${f.cls}">${f.msg}</div>`).join('')}
-  </div>`;
-
   // ── Program Guidance — tailored to assigned program + user dimensions (Source: goal_programs.md) ──
+  // Consolidated into the knowledge-base card below (Goal Analysis mentions the program name,
+  // Actionable Next Steps leads with the concrete program-specific instruction) instead of its own card.
   const goalsData=rwGet('rw_goals');
   const assignedProgram=goalsData?.program||autoAssignProgram(goalKey,exp,prof.training_days,prof.equipment);
-  const targetDaysWk=prof.training_days||3;
   const equip=prof.equipment||'full_gym';
-  const bwUser=equip==='bodyweight';
-  const dbUser=equip==='dumbbells';
 
   // Build a personalised tip from the actual program + dimensions
   function buildProgramTip(prog,goal,expLvl,daysWk,equipment){
@@ -2354,21 +2346,7 @@ function renderReview(){
     return`${prog}: Hit all major movement patterns each session (squat, hinge, push, pull). Prioritise compound lifts and aim for progressive overload every 1–2 weeks. Consistency over ${daysWk} days/week is the primary driver of results.`;
   }
 
-  const programTip=buildProgramTip(assignedProgram,goalKey,exp,targetDaysWk,equip);
-
-  // Compound foundation — varies by equipment
-  const foundationTip=bwUser
-    ?'Lead each session with your hardest bodyweight compound first (pull-ups, dips, pistol squats) when you\'re freshest — these drive the most adaptation.'
-    :dbUser
-    ?'Lead with compound dumbbell movements (DB press, DB row, DB squat, DB RDL) before isolation work — they drive the most hormonal response and stimulus.'
-    :'Lead every session with barbell or cable compound movements (Squat, Deadlift, Bench, Row, OHP, Pull-Up) before accessories — highest training ROI.';
-
-  const programHtml=`<div class="card">
-    <div class="card-title">Program · ${GOAL_LABELS_P[goalKey]||'General'} · ${assignedProgram}</div>
-    <div class="fb-item">${programTip}</div>
-    <div class="fb-item mt8">${foundationTip}</div>
-    <div class="fb-item good mt8">Post-workout: 20–40g protein within 2 hours maximises muscle protein synthesis (MPS) — ISSN 2017.</div>
-  </div>`;
+  const programTip=buildProgramTip(assignedProgram,goalKey,exp,targetDays,equip);
 
   // ── Injury Prevention (injury_prevention_and_common_mistakes.md) ──
   let injuryHtml='';
@@ -2378,15 +2356,16 @@ function renderReview(){
       <div class="card-title">Injury Prevention Checklist</div>
       <div class="fb-item warn">Warm-up every session: 5–10 min light cardio → dynamic mobility drills → 1–2 warm-up sets at 50–70% working weight. Never skip this before heavy compound lifts.</div>
       <div class="fb-item mt8">10% Rule: never increase total weekly volume by more than 10% per week. Connective tissue (tendons, ligaments) adapts 2–3× slower than muscle — this is the #1 cause of overuse injuries.</div>
-      ${pushSets>pullSets*1.5?'<div class="fb-item warn mt8">⚠️ More push than pull sets — add face pulls, rows, and band external rotations to protect your rotator cuff and prevent shoulder impingement.</div>':''}
       <div class="fb-item mt8" style="font-size:11px;color:var(--muted)">⚠️ This app provides general fitness guidance only — not medical advice. Stop training and consult a healthcare professional if you experience pain, joint swelling, or unusual symptoms.</div>
     </div>`;
   }
 
-  // ── Knowledge-base card (same 5 sections as Today, aggregated over this period) ──
-  const kbPeriodHtml=`<div class="card">${buildKnowledgeReviewPeriod(prof,{gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget},days,PERIOD_LABELS[currentReviewPeriod]||days+' Days')}</div>`;
+  // ── Knowledge-base card (same 5 sections as Today, aggregated over this period) — PRIMARY review content ──
+  const kbPeriodHtml=buildKnowledgeReviewPeriod(prof,{gymDays,cardioDays,restDays,periodWs,totalSetsAll,periodExs,
+    totalActive,periodTarget,targetDays,prevActive,patternFeedback:feedback,assignedProgram,programTip,experienceTip},
+    days,PERIOD_LABELS[currentReviewPeriod]||days+' Days');
 
-  el.innerHTML=statsHtml+strengthBenchHtml+summary+programHtml+injuryHtml+kbPeriodHtml;
+  el.innerHTML=statsHtml+strengthBenchHtml+kbPeriodHtml+injuryHtml;
 }
 
 // ─── Profile ───────────────────────────────────────────────────────────
