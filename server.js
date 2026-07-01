@@ -55,6 +55,145 @@ function mergePayload(stored, incoming) {
   };
 }
 
+// ── AI-assisted review (Replicate API — see CLAUDE.md accountability note) ────
+
+const KNOWLEDGE_DIR = path.join(DIR, 'knowledge_base');
+const MAX_KB_CHARS_PER_FILE = 2000;
+
+function knowledgeFilesForGoal(goal) {
+  const files = [
+    'health_guidelines_reference.md',
+    'progress_metrics_and_benchmarks.md',
+    'glossary_and_terminology.md',
+  ];
+  if (goal === 'hypertrophy' || goal === 'strength' || goal === 'fat_loss') {
+    files.push('nutrition_and_fueling.md');
+  }
+  if (goal === 'calisthenics' || goal === 'general_health' || goal === 'endurance') {
+    files.push('goal_programs.md');
+  }
+  return files;
+}
+
+function loadKnowledgeBase(goal) {
+  let knowledgeBase = '';
+  for (const file of knowledgeFilesForGoal(goal)) {
+    try {
+      const content = fs.readFileSync(path.join(KNOWLEDGE_DIR, file), 'utf8');
+      knowledgeBase += `\n--- ${file} ---\n${content.slice(0, MAX_KB_CHARS_PER_FILE)}\n`;
+    } catch (err) {
+      console.error(`[review] could not read ${file}:`, err.message);
+    }
+  }
+  return knowledgeBase;
+}
+
+async function getReview(workout, profile) {
+  if (!profile || typeof profile !== 'object') {
+    return { error: 'Missing profile' };
+  }
+  if (!workout || typeof workout !== 'object') {
+    return { error: 'Missing workout' };
+  }
+
+  const knowledgeBase = loadKnowledgeBase(profile.goal);
+
+  const prompt = `You are an expert fitness coach. Analyze this workout and provide personalized feedback based on the user's goal and knowledge base.
+
+User Profile:
+- Goal: ${profile.goal ?? 'unspecified'}
+- Experience: ${profile.experience ?? 'unspecified'}
+- Equipment: ${profile.equipment ?? 'unspecified'}
+- Age: ${profile.age ?? 'unspecified'}
+- Weight: ${profile.weight_kg ?? 'unspecified'} kg
+
+Workout Logged:
+${JSON.stringify(workout, null, 2)}
+
+Knowledge Base (reference for accuracy):
+${knowledgeBase}
+
+Provide feedback in this format:
+1. Summary (1-2 sentences on what they did well)
+2. One specific improvement
+3. One tip based on their goal
+4. One motivational comment
+
+Keep it concise, encouraging, and goal-specific. Do NOT make up fitness numbers - only use numbers from the knowledge base provided.`;
+
+  const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN;
+  if (!REPLICATE_TOKEN) {
+    return { error: 'REPLICATE_API_TOKEN is not set on the server' };
+  }
+
+  // Cap the wait so an unreachable/slow API fails fast with valid JSON
+  // instead of stalling until a reverse proxy kills the connection and
+  // leaves the client an empty body.
+  const REPLICATE_TIMEOUT_MS = 30000;
+  const timeoutSignal = AbortSignal.timeout(REPLICATE_TIMEOUT_MS);
+
+  let createResp;
+  try {
+    createResp = await fetch('https://api.replicate.com/v1/models/meta/llama-2-70b-chat/predictions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${REPLICATE_TOKEN}`,
+        Prefer: 'wait',
+      },
+      body: JSON.stringify({ input: { prompt, temperature: 0.7 } }),
+      signal: timeoutSignal,
+    });
+  } catch (err) {
+    console.error('[review] Replicate connection error:', err.message);
+    return { error: 'Could not connect to AI service.' };
+  }
+
+  if (!createResp.ok) {
+    console.error('[review] Replicate request failed:', createResp.status);
+    return { error: 'AI service unavailable' };
+  }
+
+  let prediction;
+  try {
+    prediction = await createResp.json();
+  } catch (err) {
+    return { error: 'AI service returned an invalid response' };
+  }
+
+  // "Prefer: wait" resolves most predictions synchronously, but poll the
+  // prediction URL as a fallback for slower runs (still bounded by the
+  // shared timeoutSignal above).
+  while (prediction.status !== 'succeeded' && prediction.status !== 'failed' && prediction.status !== 'canceled') {
+    await new Promise(r => setTimeout(r, 1000));
+    let pollResp;
+    try {
+      pollResp = await fetch(prediction.urls.get, {
+        headers: { Authorization: `Bearer ${REPLICATE_TOKEN}` },
+        signal: timeoutSignal,
+      });
+    } catch (err) {
+      return { error: 'Could not connect to AI service.' };
+    }
+    if (!pollResp.ok) {
+      return { error: 'AI service unavailable' };
+    }
+    try {
+      prediction = await pollResp.json();
+    } catch (err) {
+      return { error: 'AI service returned an invalid response' };
+    }
+  }
+
+  if (prediction.status !== 'succeeded') {
+    console.error('[review] Replicate prediction did not succeed:', prediction.status, prediction.error);
+    return { error: 'AI service could not generate a review' };
+  }
+
+  const output = Array.isArray(prediction.output) ? prediction.output.join('') : prediction.output;
+  return { feedback: output || 'Could not generate feedback' };
+}
+
 // ── request handler ───────────────────────────────────────────────────────────
 
 const server = http.createServer((req, res) => {
@@ -90,6 +229,32 @@ const server = http.createServer((req, res) => {
         console.log(`[sync] ${new Date().toISOString()} — merged OK`);
       } catch (e) {
         res.writeHead(400); res.end(JSON.stringify({ error: 'Bad JSON' }));
+      }
+    });
+    return;
+  }
+
+  // ── POST /api/review ── AI-assisted workout feedback via Replicate
+  if (url === '/api/review' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      let workout, profile;
+      try {
+        ({ workout, profile } = JSON.parse(body));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Bad JSON' }));
+        return;
+      }
+      try {
+        const review = await getReview(workout, profile);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(review));
+      } catch (err) {
+        console.error('[review] unexpected error:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal error generating review' }));
       }
     });
     return;

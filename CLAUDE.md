@@ -6,10 +6,27 @@
 ## WHAT THIS PROJECT IS
 
 A fitness tracker PWA (Progressive Web App). Users log workouts, track
-progress, and get smart notifications. All logic is coded — there is no
-AI running at runtime. Claude Code's job is to write the app's code,
-using the knowledge base files as the source of truth for all fitness
-logic, numbers, and rules.
+progress, and get smart notifications. Most logic is coded — the
+`generateReview()` engine described below is a pure function with no AI
+involved. Claude Code's job is to write the app's code, using the
+knowledge base files as the source of truth for all fitness logic,
+numbers, and rules.
+
+**Exception — AI-assisted review (`/api/review`):** `server.js` also
+exposes an optional endpoint that calls the Replicate API
+(`meta/llama-2-70b-chat`) to generate a supplementary natural-language
+workout summary. This sends data to a third-party cloud API — it is NOT
+local-only — and is additive to, not a replacement for, the coded
+`generateReview()` engine.
+- Accountable associate: syarhan.syakir@bissell.com
+- Data sent to the model: workout log + profile fields (age, weight_kg,
+  goal, experience, equipment). No name/email/user_id is included in the
+  prompt.
+- The Replicate API token is read from the `REPLICATE_API_TOKEN`
+  environment variable only — never hardcoded or committed.
+- Per BISSELL's AI Acceptable Use Policy, output from this endpoint is
+  AI-generated and must be reviewed for accuracy before being trusted;
+  if ever surfaced to other stakeholders, disclose that it is AI-generated.
 
 ---
 
