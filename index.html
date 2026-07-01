@@ -1294,15 +1294,25 @@ function showStorageWarning(){
   if(bar){bar.textContent='⚠️ Storage full — clear old data in Settings';bar.style.opacity='1';bar.style.color='#f87171';}
 }
 function autoSave(){
-  if(!S.isRest&&S.items.length===0)return;
   const ws=getWorkouts();
   const activeDate=S.editDate||todayStr();
   const prevRaw=ws[activeDate];
   const prevItems=prevRaw?normalizeWorkout(prevRaw).items||[]:[];
+  if(!S.isRest&&S.items.length===0){
+    // Nothing to persist. If a stored entry already exists (e.g. its last
+    // exercise was just removed), delete it so the deletion sticks.
+    if(prevRaw){
+      delete ws[activeDate];
+      const saved=rwSet('rw_workouts',ws);
+      if(!saved){console.error('autoSave: failed to persist deletion for',activeDate);showStorageWarning();return;}
+      queueSync();
+    }
+    return;
+  }
   const entry={type:S.isRest?'rest':'workout',items:S.items,notes:S.notes,recovery:S.recovery,_ts:Date.now()};
   ws[activeDate]=entry;
   const saved=rwSet('rw_workouts',ws);
-  if(!saved){showStorageWarning();return;}
+  if(!saved){console.error('autoSave: rwSet failed for',activeDate,'— localStorage quota likely exceeded');showStorageWarning();return;}
   checkStrengthTierUp(prevItems,S.items);
   const bar=document.getElementById('autosave-bar');
   if(bar){bar.textContent='Saved';bar.style.color='';bar.style.opacity='1';clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>bar.style.opacity='0',1400);}
