@@ -668,11 +668,11 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 
 <!-- Bottom Nav -->
 <nav id="nav">
-  <button class="nav-btn active" onclick="goTab('log',this)"><span class="ni">📝</span>Log</button>
-  <button class="nav-btn" onclick="goTab('hist',this)"><span class="ni">📅</span>History</button>
-  <button class="nav-btn" onclick="goTab('rev',this)"><span class="ni">📊</span>Reviews</button>
-  <button class="nav-btn" onclick="goTab('prof',this)"><span class="ni">👤</span>Profile</button>
-  <button class="nav-btn" onclick="goTab('set',this)"><span class="ni">⚙️</span>Settings</button>
+  <button class="nav-btn active" data-tab="log" onclick="goTab('log',this)"><span class="ni">📝</span>Log</button>
+  <button class="nav-btn" data-tab="hist" onclick="goTab('hist',this)"><span class="ni">📅</span>History</button>
+  <button class="nav-btn" data-tab="rev" onclick="goTab('rev',this)"><span class="ni">📊</span>Reviews</button>
+  <button class="nav-btn" data-tab="prof" onclick="goTab('prof',this)"><span class="ni">👤</span>Profile</button>
+  <button class="nav-btn" data-tab="set" onclick="goTab('set',this)"><span class="ni">⚙️</span>Settings</button>
 </nav>
 
 <!-- Exercise Modal -->
@@ -1291,11 +1291,12 @@ function goTab(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('p-'+id).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  (btn||document.querySelector(`.nav-btn[data-tab="${id}"]`))?.classList.add('active');
   if(id==='hist'){renderCal();renderHist()}
   if(id==='rev'){renderReview()}
   if(id==='prof'){renderProfile()}
   if(id==='set'){renderSettingsPage()}
+  localStorage.setItem('rw_last_tab',id);
 }
 
 // ─── Session type ──────────────────────────────────────────────────────
@@ -3231,6 +3232,11 @@ function init(){
     if(!S.isRest&&S.items.length)renderItemList();
   }
   initNotifications();
+  // Restore whichever tab the user was last on, instead of always resetting to Log
+  const lastTab=localStorage.getItem('rw_last_tab');
+  if(lastTab&&lastTab!=='log'&&document.getElementById('p-'+lastTab)){
+    goTab(lastTab);
+  }
 }
 init();
 
