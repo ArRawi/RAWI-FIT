@@ -1881,6 +1881,69 @@ function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
     ${kbSection(`kb5-${uid}`,'✅','Actionable Next Steps','kb-good',s5,null)}
   </div>`;
 }
+// Same 5-section knowledge-base card as buildKnowledgeReview, aggregated over a multi-day review period
+// instead of a single day's log. stats: {gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget}.
+function buildKnowledgeReviewPeriod(prof,stats,days,periodLabel){
+  const{gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget}=stats;
+  const goalKey=GOAL_KB[prof.goal]?prof.goal:null;
+  const goalKb=goalKey?GOAL_KB[goalKey]:GOAL_KB_FALLBACK;
+  const physioKb=goalKey&&PHYSIO_KB[goalKey]?PHYSIO_KB[goalKey]:PHYSIO_KB_FALLBACK;
+  const{primary,secondary}=(()=>{const d=getDisciplines(prof);return{primary:d[0],secondary:d.slice(1)};})();
+  const discKb=DISCIPLINE_KB[primary]||DISCIPLINE_KB.general_fitness;
+  const discName=DISCIPLINES[primary]?.name||primary;
+  const exp=expTier(prof.experience);
+  const pLabel=periodLabel.toLowerCase();
+
+  // ── Section 1: Period Feedback ──
+  const s1Status=totalActive===0?'warn':totalActive>=periodTarget*0.7?'good':'ok';
+  const s1=totalActive===0
+    ?`<p>No sessions logged in ${pLabel} — here's guidance based on your goal and training profile to help you get started.</p>`
+    :`<p><strong>${totalActive} session${totalActive>1?'s':''}</strong> logged in ${pLabel} (target ~${periodTarget}). ${totalActive>=periodTarget*0.7?'Good consistency ✓.':'A bit behind pace — closing this gap is the highest-leverage change you can make.'}</p>`;
+
+  // ── Section 2: Goal-Specific Analysis ──
+  let s2,s2Status='ok';
+  if(goalKb.isEndurance){
+    const dist=cardioDays.reduce((n,[,v])=>n+(v.items||[]).filter(i=>i.kind==='cardio'&&i.cardioType==='run').reduce((m,i)=>m+(parseFloat(i.data?.distance)||0),0),0);
+    const weeklyDist=Math.round(dist*(7/days)*10)/10;
+    s2=`<p>Total running distance in ${pLabel}: ${dist.toFixed(1)} km (~${weeklyDist} km/week average). Endurance training targets 80% of weekly volume in Zone 1–2 (easy) and only 20% in Zone 4–5 (hard).</p>`;
+  } else if(goalKey&&totalSetsAll>0){
+    const[vlo,vhi]=goalKb.volumeByExp[exp];
+    const weeklySets=Math.round(totalSetsAll*(7/days)*10)/10;
+    const volOk=weeklySets>=vlo;
+    s2Status=volOk?'good':'warn';
+    s2=`<p>Average weekly volume in ${pLabel}: <strong>~${weeklySets} sets</strong> (target ${vlo}–${vhi} sets/muscle/week for a ${exp} lifter). ${volOk?'On target ✓.':'Below target — add sets or an extra session per week.'}</p>
+      <p>Goal rep range: ${goalKb.repLabel}.</p>`;
+  } else if(goalKey){
+    s2=`<p>No resistance sessions logged in ${pLabel} to check against your ${GOAL_LABELS_KB[goalKey]} volume target${goalKb.volumeByExp?` (${goalKb.volumeByExp[exp].join('–')} sets/muscle/week)`:''}.</p>`;
+  } else {
+    s2=`<p>${GOAL_KB_FALLBACK.nextStep}</p>`;
+  }
+
+  // ── Section 3: Discipline-Specific Guidance ──
+  const df=disciplineFeedback(primary,{gymDays,cardioDays,totalSetsAll,exs:periodExs,days});
+  const s3Status=df?(df.cls==='warn'?'warn':df.cls==='good'?'good':'ok'):'ok';
+  const volLine=discKb.volumeByExp?`Weekly volume target: ${discKb.volumeByExp[exp].join('–')} ${discKb.unit}.`:`Target: ${discKb.unit}.`;
+  const s3=`<p><strong>Primary focus: ${discName}.</strong>${secondary.length?` Secondary: ${secondary.map(k=>DISCIPLINES[k]?.name||k).join(', ')}.`:''}</p>
+    <p>${df?df.msg:`Not enough ${discName}-specific data logged in ${pLabel} yet.`}</p>
+    <p>${volLine} ${discKb.rest}.</p>
+    <p>${discKb.nextStep}</p>`;
+
+  // ── Section 4: Physiological Insight ──
+  const s4=`<p>${physioKb.insight}</p>`;
+
+  // ── Section 5: Actionable Next Steps ──
+  const steps=[goalKb.nextStep||GOAL_KB_FALLBACK.nextStep,discKb.nextStep,'Prioritise 7–9 hours of sleep most nights — recovery is where the adaptation actually happens.'];
+  const s5=`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+
+  const uid=Math.random().toString(36).slice(2,8);
+  return `<div class="kb-wrap">
+    ${kbSection(`kbp1-${uid}`,'⚡','Period Feedback',kbColorClass(s1Status),s1,null)}
+    ${kbSection(`kbp2-${uid}`,'🎯',`Goal Analysis — ${GOAL_LABELS_KB[prof.goal]||'General Fitness'}`,kbColorClass(s2Status),s2,goalKb.file||GOAL_KB_FALLBACK.file)}
+    ${kbSection(`kbp3-${uid}`,'🏋️',`Discipline Guidance — ${discName}`,kbColorClass(s3Status),s3,discKb.file)}
+    ${kbSection(`kbp4-${uid}`,'🧬','Physiological Insight','kb-good',s4,physioKb.file)}
+    ${kbSection(`kbp5-${uid}`,'✅','Actionable Next Steps','kb-good',s5,null)}
+  </div>`;
+}
 function kbColorClass(status){return{good:'kb-good',ok:'kb-ok',warn:'kb-warn',risk:'kb-risk'}[status]||'kb-ok';}
 const GOAL_LABELS_KB={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Calisthenics',recomp:'Body Recomp'};
 
@@ -2207,12 +2270,8 @@ function renderReview(){
     if(!deloadFound)feedback.push({msg:'No deload week detected in the last 8 weeks. After 4–8 weeks of hard training, a planned deload (reduce volume 40–50% for 1 week) prevents overuse injuries and typically leads to better performance the following week.',cls:'warn'});
   }
 
-  // Discipline-specific feedback (Source: training_disciplines.md — combined with goal/consistency/push-pull/overtraining above)
+  // Period exercises used by the discipline-specific knowledge-base card below (Source: training_disciplines.md)
   const periodExs=gymDays.flatMap(([,v])=>(v.items||[]).filter(i=>i.kind==='lift'));
-  getDisciplines(prof).forEach(key=>{
-    const df=disciplineFeedback(key,{gymDays,cardioDays,totalSetsAll,exs:periodExs,days});
-    if(df)feedback.push(df);
-  });
 
   const summary=`<div class="card">
     <div class="card-title">Period Summary · ${days} Days</div>
@@ -2323,7 +2382,10 @@ function renderReview(){
     </div>`;
   }
 
-  el.innerHTML=statsHtml+strengthBenchHtml+summary+programHtml+injuryHtml;
+  // ── Knowledge-base card (same 5 sections as Today, aggregated over this period) ──
+  const kbPeriodHtml=`<div class="card">${buildKnowledgeReviewPeriod(prof,{gymDays,cardioDays,totalSetsAll,periodExs,totalActive,periodTarget},days,PERIOD_LABELS[currentReviewPeriod]||days+' Days')}</div>`;
+
+  el.innerHTML=statsHtml+strengthBenchHtml+summary+programHtml+injuryHtml+kbPeriodHtml;
 }
 
 // ─── Profile ───────────────────────────────────────────────────────────
