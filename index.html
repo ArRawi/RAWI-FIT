@@ -1105,8 +1105,11 @@ function editSession(dateStr){
   const label=new Date(dateStr+'T12:00:00').toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   const labelEl=document.getElementById('edit-date-label');
   if(banner&&labelEl){
-    if(!isToday){labelEl.textContent='Editing: '+label;banner.style.display='flex';}
-    else{banner.style.display='none';}
+    if(!isToday){
+      const isPast=dateStr<todayStr();
+      labelEl.textContent=(isPast?'Editing: ':'Logging: ')+label;
+      banner.style.display='flex';
+    }else{banner.style.display='none';}
   }
 
   // Restore rest toggle UI
@@ -2149,11 +2152,11 @@ function cardioDistData(){
   const ws=getWorkouts();
   return Object.entries(ws)
     .map(([d,w])=>[d,normalizeWorkout(w)])
-    .filter(([,w])=>(w.items||[]).some(i=>i.kind==='cardio'&&parseFloat(i.data?.dist)>0))
+    .filter(([,w])=>(w.items||[]).some(i=>i.kind==='cardio'&&parseFloat(i.data?.distance)>0))
     .sort(([a],[b])=>a.localeCompare(b))
     .slice(-15)
     .map(([date,w])=>{
-      const totalDist=(w.items||[]).filter(i=>i.kind==='cardio').reduce((s,i)=>s+(parseFloat(i.data?.dist)||0),0);
+      const totalDist=(w.items||[]).filter(i=>i.kind==='cardio').reduce((s,i)=>s+(parseFloat(i.data?.distance)||0),0);
       return {y:totalDist, label:date.slice(5), color:'#f43f5e'};
     });
 }
@@ -2494,15 +2497,15 @@ function clearWeightGoal(){
 function renderGoalDisplay(){
   const goals=getGoals();
   const prof=LS('rw_profile')||{};
-  const bio=(prof.bio||[]);
+  const bio=(prof.weight_history||prof.bio||[]);
   const latest=bio.length?bio[bio.length-1]:null;
   const el=document.getElementById('goal-display');
   const form=document.getElementById('goal-form');
   if(!el||!form)return;
   if(!goals.weight){el.innerHTML='';form.style.display='';return;}
   const g=goals.weight;
-  const cur=latest?latest.weight:null;
-  const start=bio.length>1?bio[0].weight:cur;
+  const cur=latest?latest.weight_kg??latest.weight:null;
+  const start=bio.length>1?(bio[0].weight_kg??bio[0].weight):cur;
   let pct=0;
   if(cur&&start&&g.target!==start){
     pct=Math.round(Math.min(100,Math.max(0,Math.abs((cur-start)/(g.target-start))*100)));
@@ -2681,16 +2684,16 @@ function _chkGoal(){
   const goals=getGoals();
   if(!goals.weight||goals.weight.achieved)return false;
   const prof=LS('rw_profile')||{};
-  const bio=prof.bio||[];
+  const bio=prof.weight_history||prof.bio||[];
   const latest=bio.length?bio[bio.length-1]:null;
   if(!latest)return false;
   const g=goals.weight;
-  const achieved=(g.target<latest.weight)?(latest.weight<=g.target):(latest.weight>=g.target);
-  if(g.target<=latest.weight||(g.target>=latest.weight&&latest.weight<=g.target)){
-    // simpler: achieved if current weight reached or passed target
-    const diff=latest.weight-g.target;
-    const reached=Math.abs(diff)<=0.5||(g.target<(bio[0]?.weight||latest.weight)?diff<=0:diff>=0);
-    if(!reached)return false;
+  const latestW=latest.weight_kg??latest.weight;
+  const startW=(bio[0]?.weight_kg??bio[0]?.weight)??latestW;
+  // Achieved if current weight has reached or passed the target (within 0.5 kg tolerance)
+  const diff=latestW-g.target;
+  const reached=Math.abs(diff)<=0.5||(g.target<startW?diff<=0:diff>=0);
+  if(reached){
     const g2=getGoals();g2.weight.achieved=true;setGoals(g2);
     fireNotif('Goal Achieved! 🎉',`You hit your target of ${g.target} kg! That's a real milestone — be proud of the consistency it took.`,'goal');
     _markFired();
@@ -2892,17 +2895,6 @@ if('serviceWorker' in navigator){
           }
         };
       };
-
-      // Listen for sync-complete messages from the SW
-      navigator.serviceWorker.addEventListener('message',e=>{
-        if(e.data?.type==='SYNC_COMPLETE'){
-          applyServerData(e.data.data);
-          showBadge('✓ Synced','var(--success)');
-        }
-      });
-
-      // Pull on every page load (if server is reachable)
-      pullFromServer();
 
       // Listen for sync-complete messages from the SW
       navigator.serviceWorker.addEventListener('message',e=>{
