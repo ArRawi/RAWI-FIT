@@ -77,9 +77,6 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .ob-dot.active{background:var(--accent);width:24px;border-radius:4px}
 .ob-title{font-size:26px;font-weight:800;margin-bottom:8px}
 .ob-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
-.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-bottom:24px}
-.style-btn{padding:18px 12px;border-radius:var(--radius);background:var(--surface2);border:2px solid var(--border);color:var(--text);font-size:14px;font-weight:700;transition:all .2s;text-align:center}
-.style-btn.active{border-color:var(--accent);background:#7c6af720;color:var(--accent)}
 /* Calendar */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
 .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted)}
@@ -129,6 +126,21 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .fb-item{padding:10px 12px;background:var(--surface2);border-radius:10px;margin-bottom:8px;font-size:13px;line-height:1.5;border-left:3px solid var(--accent)}
 .fb-item.warn{border-left-color:var(--accent3)}
 .fb-item.good{border-left-color:var(--success)}
+/* Knowledge-base review sections */
+.kb-wrap{margin-top:14px}
+.kb-section{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.kb-head{display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;background:var(--surface2);border-left:4px solid var(--muted)}
+.kb-head.kb-good{border-left-color:var(--success)}
+.kb-head.kb-ok{border-left-color:#eab308}
+.kb-head.kb-warn{border-left-color:var(--accent3)}
+.kb-head.kb-risk{border-left-color:var(--red)}
+.kb-icon{font-size:16px}
+.kb-title{flex:1;font-size:13px;font-weight:700}
+.kb-chev{font-size:12px;color:var(--muted);transition:transform .2s}
+.kb-body{padding:12px 14px;font-size:13px;line-height:1.6}
+.kb-body p{margin:0 0 8px}
+.kb-body ol,.kb-body ul{margin:0 0 8px;padding-left:18px}
+.kb-cite{font-size:11px;color:var(--muted);margin-top:6px}
 /* Misc */
 .section-title{font-size:18px;font-weight:800;margin-bottom:14px}
 .divider{height:1px;background:var(--border);margin:14px 0}
@@ -294,14 +306,9 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
       <div class="ob-err" id="err-equip">Please select your equipment.</div>
     </div>
     <div style="width:100%;max-width:360px;margin-top:4px">
-      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">Training Method</div>
-      <div class="ob-card-grid" id="ob-method-grid">
-        <div class="ob-card" data-val="failure" onclick="obCard('training_method',this)"><span class="oci">🎯</span>Until Failure<div class="ocd">Push every set to the max</div></div>
-        <div class="ob-card" data-val="volume" onclick="obCard('training_method',this)"><span class="oci">📦</span>Volume Training<div class="ocd">Lots of sets, moderate weight</div></div>
-        <div class="ob-card" data-val="strength" onclick="obCard('training_method',this)"><span class="oci">⚡</span>Strength Focus<div class="ocd">Heavy weight, low reps</div></div>
-        <div class="ob-card" data-val="endurance" onclick="obCard('training_method',this)"><span class="oci">🏅</span>Endurance<div class="ocd">Lighter weights, cardio-heavy</div></div>
-      </div>
-      <div class="ob-err" id="err-method">Please select a training method.</div>
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">What's your primary training discipline? <span style="font-weight:400">(select at least 1)</span></div>
+      <div class="ob-card-grid" id="ob-disc-grid"></div>
+      <div class="ob-err" id="err-disc">Please select at least one training discipline.</div>
     </div>
     <div class="field" style="width:100%;max-width:360px;margin-top:4px">
       <label style="display:flex;align-items:center;justify-content:space-between">
@@ -342,7 +349,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 <!-- LOG -->
 <div class="page active" id="p-log">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-    <div class="section-title" style="margin-bottom:0" id="log-page-title">Today's Session <span style="font-size: 12px; color: var(--muted);">v1.0.3</span></div>
+    <div class="section-title" style="margin-bottom:0" id="log-page-title">Today's Session <span style="font-size: 12px; color: var(--muted);">v1.1.0</span></div>
     <div id="sync-badge" style="font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px;opacity:0;transition:opacity .4s"></div>
   </div>
   <div id="edit-date-banner" style="display:none;margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;border-left:3px solid var(--accent);align-items:center;justify-content:space-between">
@@ -431,15 +438,11 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   <div class="section-title">Profile</div>
   <!-- Stats -->
   <div class="card" id="prof-stats"></div>
-  <!-- Workout Style -->
+  <!-- Training Disciplines -->
   <div class="card">
-    <div class="card-title">Workout Style</div>
-    <div class="style-grid" style="margin-bottom:0" id="prof-style-btns">
-      <button class="style-btn" data-style="failure" onclick="setStyle('failure',this)">🎯 Until Failure</button>
-      <button class="style-btn" data-style="volume" onclick="setStyle('volume',this)">📦 Volume</button>
-      <button class="style-btn" data-style="strength" onclick="setStyle('strength',this)">🏋️ Strength</button>
-      <button class="style-btn" data-style="endurance" onclick="setStyle('endurance',this)">🏅 Endurance</button>
-    </div>
+    <div class="card-title">Training Disciplines</div>
+    <div id="prof-disc-badges" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div class="text-muted text-sm" style="margin-top:8px">Change these anytime in Settings → Edit Profile.</div>
   </div>
   <!-- Training Overview -->
   <div class="card">
@@ -484,92 +487,83 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
     <div class="mt12" id="bio-records"></div>
   </div>
 
-  <!-- Edit Profile -->
-  <div class="card">
-    <div class="row" style="cursor:pointer" onclick="toggleEditProfile()">
-      <div class="card-title flex1" style="margin-bottom:0">Edit Profile</div>
-      <span id="edit-prof-chevron" style="font-size:18px;color:var(--muted);transition:transform .2s">▼</span>
-    </div>
-    <div id="edit-prof-body" style="display:none;margin-top:14px">
-
-      <!-- Personal Info -->
-      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Personal Info</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div class="field" style="margin:0"><label>Age</label><input type="number" id="ep-age" min="13" max="100" placeholder="e.g. 25"></div>
-        <div class="field" style="margin:0"><label id="ep-height-label">Height (cm)</label><input type="number" id="ep-height" placeholder="e.g. 175"></div>
-        <div class="field" style="margin:0"><label id="ep-weight-label">Weight (kg)</label><input type="number" id="ep-weight" step="0.1" placeholder="e.g. 75"></div>
-        <div class="field" style="margin:0"><label>Resting HR (bpm)</label><input type="number" id="ep-rhr" min="30" max="120" placeholder="optional"></div>
-      </div>
-      <div style="margin-bottom:14px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sex</div>
-        <div class="ob-sex-toggle" style="max-width:200px">
-          <button class="ob-sex-btn active" id="ep-sex-m" onclick="epSex('male')">Male</button>
-          <button class="ob-sex-btn" id="ep-sex-f" onclick="epSex('female')">Female</button>
-        </div>
-      </div>
-
-      <!-- Training Settings -->
-      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Training Settings</div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Goal</div>
-        <div class="ob-card-grid" id="ep-goal-grid">
-          <div class="ob-card" data-val="fat_loss" onclick="epCard('goal',this)"><span class="oci">🔥</span>Lose Fat</div>
-          <div class="ob-card" data-val="hypertrophy" onclick="epCard('goal',this)"><span class="oci">💪</span>Build Muscle</div>
-          <div class="ob-card" data-val="strength" onclick="epCard('goal',this)"><span class="oci">🏋️</span>Get Stronger</div>
-          <div class="ob-card" data-val="endurance" onclick="epCard('goal',this)"><span class="oci">🏅</span>Improve Fitness</div>
-          <div class="ob-card" data-val="general_health" onclick="epCard('goal',this)"><span class="oci">❤️</span>Stay Healthy</div>
-          <div class="ob-card" data-val="calisthenics" onclick="epCard('goal',this)"><span class="oci">🤸</span>Bodyweight</div>
-          <div class="ob-card" data-val="recomp" onclick="epCard('goal',this)" style="grid-column:1/-1"><span class="oci">⚖️</span>Body Recomp</div>
-        </div>
-      </div>
-      <div style="margin-bottom:10px">
-        <label style="font-size:12px;color:var(--muted)">Training Days / Week</label>
-        <div class="ob-stepper" style="margin-top:6px">
-          <button class="ob-step-btn" onclick="epDays(-1)">−</button>
-          <div class="ob-step-val" id="ep-days-val">3</div>
-          <button class="ob-step-btn" onclick="epDays(1)">+</button>
-        </div>
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Experience Level</div>
-        <div class="ob-card-grid" id="ep-exp-grid">
-          <div class="ob-card" data-val="beginner" onclick="epCard('experience',this)"><span class="oci">🌱</span>Just Starting</div>
-          <div class="ob-card" data-val="novice" onclick="epCard('experience',this)"><span class="oci">📈</span>Some Experience</div>
-          <div class="ob-card" data-val="intermediate" onclick="epCard('experience',this)"><span class="oci">🎯</span>Training Regularly</div>
-          <div class="ob-card" data-val="advanced" onclick="epCard('experience',this)"><span class="oci">🏆</span>Very Experienced</div>
-        </div>
-      </div>
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Equipment</div>
-        <div class="ob-card-grid" id="ep-equip-grid">
-          <div class="ob-card" data-val="full_gym" onclick="epCard('equipment',this)"><span class="oci">🏋️</span>Full Gym</div>
-          <div class="ob-card" data-val="dumbbells" onclick="epCard('equipment',this)"><span class="oci">🏠</span>Dumbbells Only</div>
-          <div class="ob-card" data-val="bodyweight" onclick="epCard('equipment',this)"><span class="oci">🤸</span>No Equipment</div>
-          <div class="ob-card" data-val="mixed" onclick="epCard('equipment',this)"><span class="oci">🔧</span>Mixed Setup</div>
-        </div>
-      </div>
-      <div style="margin-bottom:14px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Training Method</div>
-        <div class="ob-card-grid" id="ep-method-grid">
-          <div class="ob-card" data-val="failure" onclick="epCard('training_method',this)"><span class="oci">🎯</span>Until Failure</div>
-          <div class="ob-card" data-val="volume" onclick="epCard('training_method',this)"><span class="oci">📦</span>Volume</div>
-          <div class="ob-card" data-val="strength" onclick="epCard('training_method',this)"><span class="oci">⚡</span>Strength Focus</div>
-          <div class="ob-card" data-val="endurance" onclick="epCard('training_method',this)"><span class="oci">🏅</span>Endurance</div>
-        </div>
-      </div>
-
-      <div id="ep-err" style="display:none;color:#f87171;font-size:13px;margin-bottom:10px"></div>
-      <button class="btn btn-primary btn-block" onclick="saveEditProfile()">Save Changes</button>
-    </div>
-
-    <!-- Change History -->
-    <div id="prof-change-history" style="margin-top:14px"></div>
-  </div>
 </div>
 
 <!-- SETTINGS -->
 <div class="page" id="p-set">
   <div class="section-title">Settings</div>
+
+  <!-- Edit Profile -->
+  <div class="card">
+    <div class="card-title">Edit Profile</div>
+
+    <!-- Personal Info -->
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Personal Info</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="field" style="margin:0"><label>Age</label><input type="number" id="ep-age" min="13" max="100" placeholder="e.g. 25"></div>
+      <div class="field" style="margin:0"><label id="ep-height-label">Height (cm)</label><input type="number" id="ep-height" placeholder="e.g. 175"></div>
+      <div class="field" style="margin:0"><label id="ep-weight-label">Weight (kg)</label><input type="number" id="ep-weight" step="0.1" placeholder="e.g. 75"></div>
+      <div class="field" style="margin:0"><label>Resting HR (bpm)</label><input type="number" id="ep-rhr" min="30" max="120" placeholder="optional"></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sex</div>
+      <div class="ob-sex-toggle" style="max-width:200px">
+        <button class="ob-sex-btn active" id="ep-sex-m" onclick="epSex('male')">Male</button>
+        <button class="ob-sex-btn" id="ep-sex-f" onclick="epSex('female')">Female</button>
+      </div>
+    </div>
+
+    <!-- Training Settings -->
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Training Settings</div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Goal</div>
+      <div class="ob-card-grid" id="ep-goal-grid">
+        <div class="ob-card" data-val="fat_loss" onclick="epCard('goal',this)"><span class="oci">🔥</span>Lose Fat</div>
+        <div class="ob-card" data-val="hypertrophy" onclick="epCard('goal',this)"><span class="oci">💪</span>Build Muscle</div>
+        <div class="ob-card" data-val="strength" onclick="epCard('goal',this)"><span class="oci">🏋️</span>Get Stronger</div>
+        <div class="ob-card" data-val="endurance" onclick="epCard('goal',this)"><span class="oci">🏅</span>Improve Fitness</div>
+        <div class="ob-card" data-val="general_health" onclick="epCard('goal',this)"><span class="oci">❤️</span>Stay Healthy</div>
+        <div class="ob-card" data-val="calisthenics" onclick="epCard('goal',this)"><span class="oci">🤸</span>Bodyweight</div>
+        <div class="ob-card" data-val="recomp" onclick="epCard('goal',this)" style="grid-column:1/-1"><span class="oci">⚖️</span>Body Recomp</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;color:var(--muted)">Training Days / Week</label>
+      <div class="ob-stepper" style="margin-top:6px">
+        <button class="ob-step-btn" onclick="epDays(-1)">−</button>
+        <div class="ob-step-val" id="ep-days-val">3</div>
+        <button class="ob-step-btn" onclick="epDays(1)">+</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Experience Level</div>
+      <div class="ob-card-grid" id="ep-exp-grid">
+        <div class="ob-card" data-val="beginner" onclick="epCard('experience',this)"><span class="oci">🌱</span>Just Starting</div>
+        <div class="ob-card" data-val="novice" onclick="epCard('experience',this)"><span class="oci">📈</span>Some Experience</div>
+        <div class="ob-card" data-val="intermediate" onclick="epCard('experience',this)"><span class="oci">🎯</span>Training Regularly</div>
+        <div class="ob-card" data-val="advanced" onclick="epCard('experience',this)"><span class="oci">🏆</span>Very Experienced</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Equipment</div>
+      <div class="ob-card-grid" id="ep-equip-grid">
+        <div class="ob-card" data-val="full_gym" onclick="epCard('equipment',this)"><span class="oci">🏋️</span>Full Gym</div>
+        <div class="ob-card" data-val="dumbbells" onclick="epCard('equipment',this)"><span class="oci">🏠</span>Dumbbells Only</div>
+        <div class="ob-card" data-val="bodyweight" onclick="epCard('equipment',this)"><span class="oci">🤸</span>No Equipment</div>
+        <div class="ob-card" data-val="mixed" onclick="epCard('equipment',this)"><span class="oci">🔧</span>Mixed Setup</div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Training Disciplines <span style="color:var(--muted)">(select at least 1)</span></div>
+      <div class="ob-card-grid" id="ep-disc-grid"></div>
+    </div>
+
+    <div id="ep-err" style="display:none;color:#f87171;font-size:13px;margin-bottom:10px"></div>
+    <button class="btn btn-primary btn-block" onclick="saveEditProfile()">Save Changes</button>
+
+    <!-- Change History -->
+    <div id="prof-change-history" style="margin-top:14px"></div>
+  </div>
 
   <!-- Permission banner -->
   <div class="card" id="notif-banner" style="display:none;border-left:3px solid var(--accent3)">
@@ -854,14 +848,109 @@ function LSS(k,v){rwSet(k,v)}
 function getWorkouts(){return rwGet('rw_workouts')||{}}
 function getProfile(){
   const p=rwGet('rw_profile');
-  if(!p)return{training_method:'volume',workoutStyle:'volume',records:[],weight_history:[]};
+  if(!p)return{disciplines:['general_fitness'],records:[],weight_history:[]};
   // normalise legacy shape
   if(!p.weight_history)p.weight_history=p.records||[];
-  // Migrate legacy workoutStyle field → training_method
-  if(!p.training_method)p.training_method=p.workoutStyle||'volume';
+  // Migrate legacy training_method/workoutStyle → disciplines (Source: training_disciplines.md Migration Notes)
+  if(!Array.isArray(p.disciplines)||!p.disciplines.length){
+    const legacy=p.training_method||p.workoutStyle;
+    p.disciplines=legacy&&TM_MIGRATION[legacy]?[TM_MIGRATION[legacy]]:['general_fitness'];
+  }
+  delete p.training_method;delete p.workoutStyle;
   return p;
 }
 function fmt(n,dec=1){return isNaN(n)?'—':Number(n).toFixed(dec)}
+
+// ─── Training Disciplines (Source: training_disciplines.md) ────────────
+// Users multi-select disciplines; each carries the description shown in
+// onboarding/edit profile and drives discipline-specific review feedback.
+const DISCIPLINES={
+  powerlifting:{name:'Powerlifting',icon:'🏋️',desc:'Competitive strength sport: squat, bench press, deadlift.'},
+  olympic_weightlifting:{name:'Weightlifting (Olympic)',icon:'🥇',desc:'Competitive Olympic lifting: snatch and clean & jerk.'},
+  bodybuilding:{name:'Bodybuilding',icon:'💪',desc:'Aesthetic muscle development through hypertrophy and symmetry.'},
+  strength_training:{name:'Strength Training',icon:'⚡',desc:'General strength development with progressive overload.'},
+  calisthenics:{name:'Calisthenics',icon:'🤸',desc:'Bodyweight and gymnastic movements — skill mastery and progressions.'},
+  running:{name:'Running',icon:'🏃',desc:'Endurance sport focused on continuous aerobic movement.'},
+  swimming:{name:'Swimming',icon:'🏊',desc:'Endurance water-based training with technique focus.'},
+  cycling:{name:'Cycling',icon:'🚴',desc:'Endurance sport with power development and aerobic capacity.'},
+  crossfit:{name:'CrossFit',icon:'🔥',desc:'Functional fitness combining weightlifting, gymnastics, and metabolic conditioning.'},
+  general_fitness:{name:'General Fitness',icon:'❤️',desc:'Balanced approach across all fitness dimensions — WHO guidelines.'}
+};
+// Migration Notes (training_disciplines.md): map legacy training_method → discipline
+const TM_MIGRATION={volume:'bodybuilding',failure:'bodybuilding',strength:'strength_training',endurance:'general_fitness'};
+function getDisciplines(prof){
+  const d=prof&&Array.isArray(prof.disciplines)?prof.disciplines.filter(k=>DISCIPLINES[k]):[];
+  return d.length?d:['general_fitness'];
+}
+function disciplineCardsHtml(selected,onclickFn){
+  return Object.entries(DISCIPLINES).map(([key,d])=>`
+    <div class="ob-card${(selected||[]).includes(key)?' active':''}" data-val="${key}" onclick="${onclickFn}('${key}',this)">
+      <span class="oci">${d.icon}</span>${d.name}<div class="ocd">${d.desc}</div>
+    </div>`).join('');
+}
+// Discipline-specific review feedback (Source: training_disciplines.md — Feedback priorities + Feedback Integration Rules)
+function disciplineFeedback(key,stats){
+  const{gymDays,cardioDays,totalSetsAll,exs,days}=stats;
+  const perWeek=n=>Math.round(n*(7/days)*10)/10;
+  switch(key){
+    case'powerlifting':{
+      const bigLiftSets=exs.reduce((n,e)=>{const k=getStdKey(e.name);return['squat','bench','deadlift'].includes(k)?n+(e.sets||[]).length:n;},0);
+      if(!bigLiftSets)return null;
+      const wk=perWeek(bigLiftSets);
+      return wk<8
+        ?{msg:`Powerlifting: ~${wk} weekly sets across squat/bench/deadlift. Target 8–12 sets/week per lift for meet-ready progression.`,cls:'warn'}
+        :{msg:`Powerlifting: ~${wk} weekly sets on your main lifts — solid volume. Prioritise technical form and 48–72h CNS recovery between heavy sessions.`,cls:'good'};
+    }
+    case'olympic_weightlifting':
+      return gymDays.length===0?null:gymDays.length<4
+        ?{msg:'Weightlifting (Olympic): technical lifts need frequent practice — aim for 4–5 sessions/week on snatch/clean & jerk technique, plus regular mobility work.',cls:'warn'}
+        :{msg:'Weightlifting (Olympic): good session frequency for skill development. Keep mobility work in the mix — technical precision degrades fastest when hips/shoulders tighten up.',cls:'good'};
+    case'bodybuilding':{
+      if(!totalSetsAll)return null;
+      const wk=perWeek(totalSetsAll);
+      return wk<15
+        ?{msg:`Bodybuilding: ~${wk} weekly sets logged. Hypertrophy volume target is 15–25 sets/muscle/week — add sets or an extra session.`,cls:'warn'}
+        :{msg:`Bodybuilding: ~${wk} weekly sets — good volume base. Keep reps in the 8–15 range and rotate exercises for variety.`,cls:'good'};
+    }
+    case'strength_training':{
+      if(gymDays.length===0)return null;
+      const compound=exs.filter(e=>getStdKey(e.name)).length;
+      return compound===0
+        ?{msg:'Strength Training: none of your main compound lifts (squat/bench/deadlift/OHP) were logged this period — they should anchor every strength session.',cls:'warn'}
+        :{msg:'Strength Training: compound lifts are anchoring your sessions. Track week-to-week load increases — a plateau means it\'s time to switch to wave progression.',cls:''};
+    }
+    case'calisthenics':{
+      const bwSets=exs.filter(e=>e.bw).reduce((n,e)=>n+(e.sets||[]).length,0);
+      if(gymDays.length===0)return null;
+      return bwSets===0
+        ?{msg:'Calisthenics: log bodyweight/skill work (holds, negatives, progressions) to track skill mastery over time.',cls:''}
+        :{msg:`Calisthenics: ${bwSets} bodyweight sets logged. Track hold times and rep PBs — progress to harder variations once current ones feel controlled.`,cls:'good'};
+    }
+    case'running':{
+      const dist=cardioDays.reduce((n,[,v])=>n+(v.items||[]).filter(i=>i.kind==='cardio'&&i.cardioType==='run').reduce((m,i)=>m+(parseFloat(i.data?.distance)||0),0),0);
+      if(!dist)return null;
+      return{msg:`Running: ${dist.toFixed(1)} km logged this period. Keep 80% of mileage easy (Zone 1–2) with one long run/week and max 1–2 threshold/VO2 sessions.`,cls:''};
+    }
+    case'swimming':{
+      const cnt=cardioDays.filter(([,v])=>(v.items||[]).some(i=>i.kind==='cardio'&&i.cardioType==='swimming')).length;
+      if(!cnt)return null;
+      return{msg:`Swimming: ${cnt} session(s) logged. Balance technique drills with recovery swims — most volume should stay aerobic (Zone 1–2).`,cls:''};
+    }
+    case'cycling':{
+      const cnt=cardioDays.filter(([,v])=>(v.items||[]).some(i=>i.kind==='cardio'&&i.cardioType==='cycling')).length;
+      if(!cnt)return null;
+      return{msg:`Cycling: ${cnt} ride(s) logged. Keep interval/hard sessions capped at 1–2/week — the rest should build your aerobic base.`,cls:''};
+    }
+    case'crossfit':
+      return(gymDays.length+cardioDays.length)===0?null
+        :{msg:'CrossFit: mix strength, gymnastics, and conditioning across the week — watch joint health with varied intensity, and don\'t skip mobility work.',cls:''};
+    case'general_fitness':
+    default:
+      return(gymDays.length>=2&&cardioDays.length>0)
+        ?{msg:'General Fitness: you\'re meeting the WHO guideline mix of resistance + cardio — this balanced approach is the most sustainable long-term.',cls:'good'}
+        :{msg:'General Fitness: WHO guidelines recommend 150 min moderate cardio + 2 resistance sessions/week. Aim to cover both each week for balanced, sustainable progress.',cls:''};
+  }
+}
 
 // ─── Units (SI/USCS preference) ─────────────────────────────────────────
 // rw_profile.unit_system: "si" (kg/cm) | "uscs" (lb/in). Storage stays in
@@ -985,15 +1074,25 @@ function autoAssignProgram(goal,experience,training_days,equipment){
 }
 
 // ─── Profile completeness (onboarding_spec.md Part 8) ──────────────────
-const REQUIRED_FIELDS=['age','sex','weight_kg','height_cm','goal','training_days','experience','equipment','training_method'];
+const REQUIRED_FIELDS=['age','sex','weight_kg','height_cm','goal','training_days','experience','equipment'];
 function isProfileComplete(profile){
-  if(!profile)return{complete:false,missing:REQUIRED_FIELDS};
+  if(!profile)return{complete:false,missing:[...REQUIRED_FIELDS,'disciplines']};
   const missing=REQUIRED_FIELDS.filter(f=>profile[f]===null||profile[f]===undefined||profile[f]==='');
+  if(!Array.isArray(profile.disciplines)||!profile.disciplines.length)missing.push('disciplines');
   return{complete:missing.length===0,missing};
 }
 
 // ─── Onboarding state ──────────────────────────────────────────────────
-let OB={sex:'male',unit_system:'si',goal:null,experience:null,equipment:null,training_method:null,days:3,weight_goal:null};
+let OB={sex:'male',unit_system:'si',goal:null,experience:null,equipment:null,disciplines:[],days:3,weight_goal:null};
+function renderDisciplineOptions(){
+  const grid=document.getElementById('ob-disc-grid');
+  if(grid)grid.innerHTML=disciplineCardsHtml(OB.disciplines,'obDiscToggle');
+}
+function obDiscToggle(key,el){
+  const i=OB.disciplines.indexOf(key);
+  if(i>=0)OB.disciplines.splice(i,1);else OB.disciplines.push(key);
+  el.classList.toggle('active');
+}
 
 function obStep(n){
   document.querySelectorAll('.ob-step').forEach((s,i)=>s.classList.toggle('active',i===n-1));
@@ -1064,12 +1163,13 @@ function obNext(step){
     // Show recomp note on experience screen if relevant
     const rn=document.getElementById('recomp-note-exp');
     if(rn)rn.style.display=(OB.goal==='recomp'&&(OB.experience==='beginner'||OB.experience==='novice'))?'':'none';
+    renderDisciplineOptions();
     obStep(4);
   } else if(step===4){
     const rhr=document.getElementById('ob-rhr').value;
     let ok=true;
     obShowErr('err-equip',!OB.equipment);if(!OB.equipment)ok=false;
-    obShowErr('err-method',!OB.training_method);if(!OB.training_method)ok=false;
+    obShowErr('err-disc',!OB.disciplines.length);if(!OB.disciplines.length)ok=false;
     if(rhr){const r=+rhr;obShowErr('err-rhr',!(r>=30&&r<=120));if(!(r>=30&&r<=120))ok=false;}
     if(!ok)return;
     // Build profile and show summary
@@ -1077,7 +1177,7 @@ function obNext(step){
     const w=+OB._weightKg.toFixed(1);
     const h=Math.round(OB._heightCm);
     const rhrVal=rhr?+rhr:null;
-    const partial={age:a,sex:OB.sex,unit_system:OB.unit_system,weight_kg:w,height_cm:h,goal:OB.goal,training_days:OB.days,experience:OB.experience,equipment:OB.equipment,training_method:OB.training_method,resting_hr:rhrVal,barbell_available:OB.equipment!=='bodyweight'};
+    const partial={age:a,sex:OB.sex,unit_system:OB.unit_system,weight_kg:w,height_cm:h,goal:OB.goal,training_days:OB.days,experience:OB.experience,equipment:OB.equipment,disciplines:[...OB.disciplines],resting_hr:rhrVal,barbell_available:OB.equipment!=='bodyweight'};
     const derived=computeDerivedValues(partial);
     const program=autoAssignProgram(OB.goal,OB.experience,OB.days,OB.equipment);
     const GOAL_LABELS={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Master Bodyweight',recomp:'Body Recomp'};
@@ -1565,6 +1665,156 @@ function getStdKey(name){
   return null;
 }
 
+// ─── Knowledge Base: Goal-specific training targets ─────────────────────
+// Source: knowledge_base/training_goals/*.md
+const GOAL_KB={
+  hypertrophy:{
+    file:'training_goals_hypertrophy_training.md',
+    volumeByExp:{beginner:[10,12],novice:[10,12],intermediate:[12,16],advanced:[16,24]},
+    repRange:[6,12],repLabel:'6–12 reps (primary range)',
+    nextStep:'Add 2.5–5 kg (or 1 rep) on your main lifts every 1–2 weeks, and add 2–3 sets every 2–4 weeks if recovery allows.'
+  },
+  strength:{
+    file:'training_goals_strength_training.md',
+    volumeByExp:{beginner:[4,6],novice:[4,6],intermediate:[6,10],advanced:[8,15]},
+    volumeUnit:'sets/week per competition lift',
+    repRange:[1,6],repLabel:'1–6 reps on main lifts',
+    nextStep:'Add 2.5–5 kg every 1–2 weeks on your main lift, and retest your 1RM every 4–6 weeks.'
+  },
+  fat_loss:{
+    file:'training_goals_fat_loss_training.md',
+    volumeByExp:{beginner:[8,12],novice:[8,12],intermediate:[8,12],advanced:[8,12]},
+    repRange:[6,12],repLabel:'6–8 reps (60% of volume) / 8–12 reps (40%)',
+    nextStep:'Keep resistance training ≥2×/week to preserve muscle in your deficit, and re-estimate your TDEE every 4–6 weeks as bodyweight drops.'
+  },
+  endurance:{
+    file:'training_goals_endurance_training.md',
+    isEndurance:true,
+    nextStep:'Keep 80% of training in Zone 1–2, and never increase weekly mileage by more than 10%.'
+  }
+};
+// Fallback for goals without a dedicated training_goals file (general_health, calisthenics, recomp)
+const GOAL_KB_FALLBACK={file:'health_guidelines_reference.md',nextStep:'Meet the WHO minimum of 150 min moderate cardio + 2 resistance sessions/week — consistency matters more than any single session.'};
+
+// ─── Knowledge Base: Physiological "why it matters" insights ────────────
+// Source: knowledge_base/physiological/*.md
+const PHYSIO_KB={
+  hypertrophy:{file:'physiological_hypertrophy_science.md',insight:'Training near failure in the 6–12 rep range drives mechanical tension and metabolic stress — the two main triggers for muscle protein synthesis (MPS), which stays elevated for 24–48 hours post-session. Under 6 hours of sleep can cut that protein synthesis by 30–40%, so recovery is not optional.'},
+  strength:{file:'physiological_strength_science.md',insight:'Early strength gains come mostly from your nervous system learning to recruit muscle fibers, not from muscle growth — that\'s why you can get noticeably stronger before you look any different. Heavy sets (85%+ 1RM) need 3–5 minutes of rest for full CNS recovery between sets.'},
+  endurance:{file:'physiological_endurance_science.md',insight:'Elite endurance athletes spend ~80% of training time at an easy effort (Zone 1–2) — that\'s where mitochondrial density and fat-oxidation capacity are built, forming the aerobic base later threshold/VO2 max work depends on. Increasing weekly mileage by more than 10% is a leading driver of overuse injury.'},
+  fat_loss:{file:'physiological_hypertrophy_science.md',insight:'Muscle loss in a calorie deficit is driven by insufficient protein and inadequate mechanical tension. Resistance training combined with 1.6g/kg+ protein keeps muscle protein synthesis high enough to protect the muscle you already have while you lose fat.'}
+};
+const PHYSIO_KB_FALLBACK={file:'health_guidelines_reference.md',insight:'Regular moderate activity — even without specialising — measurably lowers resting blood pressure and improves cardiovascular health markers within weeks of consistent training.'};
+
+// ─── Knowledge Base: Discipline-specific guidance ────────────────────────
+// Source: knowledge_base/Discipline_Guide/*.md
+const DISCIPLINE_KB={
+  powerlifting:{file:'discipline_powerlifting.md',volumeByExp:{beginner:[4,6],novice:[4,6],intermediate:[6,10],advanced:[8,15]},unit:'sets/week per competition lift (squat/bench/deadlift)',rest:'3–5 min rest for sets at 90%+ 1RM',nextStep:'Add 2–3 accessory/variation exercises to target your weakest range of motion off the floor or off the chest.'},
+  olympic_weightlifting:{file:'discipline_weightlifting.md',unit:'15–25 technical reps/session at 60–85% 1RM',rest:'2–3 min rest between sets',nextStep:'Drill bar-position technique (e.g. tall snatches) and keep 15–20 minutes of daily mobility work.'},
+  bodybuilding:{file:'discipline_bodybuilding.md',volumeByExp:{beginner:[15,18],novice:[15,18],intermediate:[18,24],advanced:[24,30]},unit:'sets/muscle/week',rest:'90–120 sec rest, 40–70 sec time-under-tension per set',nextStep:'Add 3–4 extra sets/week to whichever muscle group is lagging.'},
+  strength_training:{file:'discipline_strength_training.md',volumeByExp:{beginner:[8,15],novice:[8,15],intermediate:[8,15],advanced:[8,15]},unit:'sets/main movement/week',rest:'3–5 min heavy (80%+ 1RM), 2–3 min moderate',nextStep:'Identify your weakest range of motion and add 2–3 targeted exercises for it.'},
+  calisthenics:{file:'discipline_calisthenics.md',unit:'3–5 sessions/week (20–25 min skill + 20–25 min strength + 10–15 min mobility)',rest:'2–3 min rest between skill sets',nextStep:'If a progression is too hard, regress one step (e.g. archer push-up → diamond push-up) and rebuild before progressing again.'},
+  running:{file:'discipline_running.md',unit:'80% Zone 1–2 / 20% Zone 4–5, max +10% weekly mileage',rest:'2–3 complete rest days/week',nextStep:'Add one 90–120 min Zone 2 long run per week if you don\'t already have one.'},
+  swimming:{file:'discipline_swimming.md',unit:'70–80% Zone 1–2 volume, 10–15% Zone 4, 5–10% Zone 5',rest:'drill-based technique work 30–40% of sessions',nextStep:'Increase weekly distance by only 5–10% every 2–3 weeks.'},
+  cycling:{file:'discipline_cycling.md',unit:'80% easy (Zone 1–2) / 20% hard (Zone 4–6)',rest:'retest FTP every 6–8 weeks',nextStep:'Hold a 90–100 RPM cadence and spend 4–6 weeks building a Zone 2 base before adding hard intervals.'},
+  crossfit:{file:'discipline_crossfit.md',unit:'max 5 training days/week, 2 complete rest days',rest:'15–20 min daily mobility work',nextStep:'Spend 20–30% of training time on your weakest movement or capacity.'},
+  general_fitness:{file:'discipline_general_fitness.md',unit:'150–300 min cardio/week + 2–3 resistance sessions/week',rest:'2–3 complete rest days/week',nextStep:'Make sure push, pull, lower-body, and core movement patterns each get trained ~2×/week.'}
+};
+
+// ─── Knowledge-base powered review section (Ticket 5) ────────────────────
+function kbSection(id,icon,title,statusClass,bodyHtml,citation){
+  return `<div class="kb-section">
+    <div class="kb-head${statusClass?' '+statusClass:''}" onclick="kbToggle('${id}')">
+      <span class="kb-icon">${icon}</span><span class="kb-title">${title}</span><span class="kb-chev" id="${id}-chev">▾</span>
+    </div>
+    <div class="kb-body" id="${id}" style="display:none">
+      ${bodyHtml}
+      ${citation?`<div class="kb-cite">Source: ${citation}</div>`:''}
+    </div>
+  </div>`;
+}
+function kbToggle(id){
+  const body=document.getElementById(id);
+  const chev=document.getElementById(id+'-chev');
+  if(!body)return;
+  const open=body.style.display==='none';
+  body.style.display=open?'':'none';
+  if(chev)chev.style.transform=open?'rotate(180deg)':'';
+}
+function expTier(exp){return['beginner','novice','intermediate','advanced'].includes(exp)?exp:'intermediate';}
+// Builds the 5-section knowledge-base review card. w may be null (no session logged) or a rest day.
+function buildKnowledgeReview(prof,w,exs,cardioItems,totalVol){
+  const goalKey=GOAL_KB[prof.goal]?prof.goal:null;
+  const goalKb=goalKey?GOAL_KB[goalKey]:GOAL_KB_FALLBACK;
+  const physioKb=goalKey&&PHYSIO_KB[goalKey]?PHYSIO_KB[goalKey]:PHYSIO_KB_FALLBACK;
+  const{primary,secondary}=(()=>{const d=getDisciplines(prof);return{primary:d[0],secondary:d.slice(1)};})();
+  const discKb=DISCIPLINE_KB[primary]||DISCIPLINE_KB.general_fitness;
+  const discName=DISCIPLINES[primary]?.name||primary;
+  const exp=expTier(prof.experience);
+  const trainingDays=prof.training_days||3;
+  const hasSession=!!(w&&w.type!=='rest'&&((exs&&exs.length)||(cardioItems&&cardioItems.length)));
+
+  // ── Section 1: Immediate Feedback ──
+  let s1,s1Status;
+  if(!hasSession){
+    s1=`<p>No workout logged yet today — here's guidance based on your goal (${GOAL_LABELS_KB[prof.goal]||'General Fitness'}) and training profile so you're ready when you do.</p>`;
+    s1Status='ok';
+  } else {
+    const goodBits=[];
+    if(exs&&exs.length)goodBits.push(`you logged ${exs.length} exercise${exs.length>1?'s':''} totalling ${totalVol.toLocaleString()} ${weightUnit()} of volume`);
+    if(cardioItems&&cardioItems.length)goodBits.push(`${cardioItems.length} cardio session${cardioItems.length>1?'s':''}`);
+    s1=`<p><strong>Nice work</strong> — ${goodBits.join(' and ')} today. ${exs&&exs.length?'Keep an eye on the rep-range and volume checks below to stay aligned with your goal.':'Consider adding resistance work alongside your cardio to protect muscle mass.'}</p>`;
+    s1Status='good';
+  }
+
+  // ── Section 2: Goal-Specific Analysis ──
+  let s2,s2Status='ok';
+  if(goalKb.isEndurance){
+    const dist=(cardioItems||[]).reduce((n,i)=>n+(parseFloat(i.data?.distance)||0),0);
+    s2=hasSession
+      ?`<p>Today's cardio: ${dist>0?dist.toFixed(1)+' km logged. ':''}Endurance training targets 80% of weekly volume in Zone 1–2 (easy) and only 20% in Zone 4–5 (hard) — avoid Zone 3 ("grey zone") entirely.</p>`
+      :`<p>Endurance training targets 80% of weekly volume in Zone 1–2 (easy) and only 20% in Zone 4–5 (hard).</p>`;
+  } else if(goalKey&&exs&&exs.length){
+    const[vlo,vhi]=goalKb.volumeByExp[exp];
+    const plo=Math.max(1,Math.round(vlo/trainingDays)),phi=Math.max(plo,Math.round(vhi/trainingDays));
+    const todaySets=exs.reduce((n,e)=>n+(e.sets||[]).length,0);
+    const[rlo,rhi]=goalKb.repRange;
+    const offRange=exs.filter(e=>{const mx=Math.max(0,...(e.sets||[]).map(s=>+s.reps||0));return mx>0&&(mx<rlo||mx>rhi);});
+    const volOk=todaySets>=plo;
+    s2Status=volOk&&!offRange.length?'good':volOk||!offRange.length?'ok':'warn';
+    s2=`<p>Your volume today was <strong>${todaySets} sets</strong> (per-session target ~${plo}–${phi} for a ${exp} lifter on this goal, from a ${vlo}–${vhi} sets/muscle/week base). ${volOk?'On target ✓.':'A little under target — add a set or two next session.'}</p>
+      <p>Rep range check: goal target is ${goalKb.repLabel}. ${offRange.length?`${offRange.slice(0,2).map(e=>e.name).join(', ')} landed outside that range — adjust load to stay in range.`:'Everything logged today stayed in range ✓.'}</p>`;
+  } else if(goalKey){
+    s2=`<p>Goal target: ${goalKb.repLabel||'see goal guidance'}. Log a resistance session to get a volume/rep-range check against your ${GOAL_LABELS_KB[goalKey]} target.</p>`;
+  } else {
+    s2=`<p>${GOAL_KB_FALLBACK.nextStep}</p>`;
+  }
+
+  // ── Section 3: Discipline-Specific Guidance ──
+  const volLine=discKb.volumeByExp?`Volume target: ${discKb.volumeByExp[exp].join('–')} ${discKb.unit}.`:`Target: ${discKb.unit}.`;
+  const s3=`<p><strong>Primary focus: ${discName}.</strong>${secondary.length?` Secondary: ${secondary.map(k=>DISCIPLINES[k]?.name||k).join(', ')}.`:''}</p>
+    <p>${volLine} ${discKb.rest}.</p>
+    <p>${discKb.nextStep}</p>`;
+
+  // ── Section 4: Physiological Insight ──
+  const s4=`<p>${physioKb.insight}</p>`;
+
+  // ── Section 5: Actionable Next Steps ──
+  const steps=[goalKb.nextStep||GOAL_KB_FALLBACK.nextStep,discKb.nextStep,'Prioritise 7–9 hours of sleep tonight — recovery is where the adaptation actually happens.'];
+  const s5=`<ol>${steps.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+
+  const uid=Math.random().toString(36).slice(2,8);
+  return `<div class="kb-wrap">
+    ${kbSection(`kb1-${uid}`,'⚡','Immediate Feedback',kbColorClass(s1Status),s1,null)}
+    ${kbSection(`kb2-${uid}`,'🎯',`Goal Analysis — ${GOAL_LABELS_KB[prof.goal]||'General Fitness'}`,kbColorClass(s2Status),s2,goalKb.file||GOAL_KB_FALLBACK.file)}
+    ${kbSection(`kb3-${uid}`,'🏋️',`Discipline Guidance — ${discName}`,'kb-ok',s3,discKb.file)}
+    ${kbSection(`kb4-${uid}`,'🧬','Physiological Insight','kb-good',s4,physioKb.file)}
+    ${kbSection(`kb5-${uid}`,'✅','Actionable Next Steps','kb-good',s5,null)}
+  </div>`;
+}
+function kbColorClass(status){return{good:'kb-good',ok:'kb-ok',warn:'kb-warn',risk:'kb-risk'}[status]||'kb-ok';}
+const GOAL_LABELS_KB={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Calisthenics',recomp:'Body Recomp'};
+
 // ─── Reviews ───────────────────────────────────────────────────────────
 function setReview(period,btn){
   currentReviewPeriod=period;
@@ -1583,13 +1833,15 @@ function renderReview(){
   if(currentReviewPeriod==='today'){
     const rawToday=ws[todayStr()];
     const w=rawToday?normalizeWorkout(rawToday):null;
-    if(!w){html='<div class="card"><div class="empty-state"><div class="ei">📝</div>No session logged today</div></div>'}
+    if(!w){html=`<div class="card"><div class="empty-state"><div class="ei">📝</div>No session logged today</div></div>
+      <div class="card">${buildKnowledgeReview(prof,null,[],[],0)}</div>`}
     else if(w.type==='rest'){
       html=`<div class="card"><div class="card-title">Today — Rest Day</div>
         <div class="stat-box" style="text-align:left;padding:14px">Recovery feeling: <strong>${w.recovery||'—'}</strong></div>
         <div class="fb-item good mt8">Active Recovery Tip: Light Zone 1 activity (walk, gentle stretch) beats complete inactivity — promotes blood flow and reduces DOMS without adding training stress.</div>
         ${w.notes?`<div class="mt8 text-muted">${w.notes}</div>`:''}
-      </div>`;
+      </div>
+      <div class="card">${buildKnowledgeReview(prof,w,[],[],0)}</div>`;
     } else {
       const mhr=prof.mhr||(prof.age?Math.round(208-0.7*prof.age):latest?Math.round(208-0.7*latest.age):190);
       const hz=prof.hr_zones||null;
@@ -1671,7 +1923,8 @@ function renderReview(){
         ${cardioHtml}${benchHtml}${progressHtml}${goalAlignHtml}${equipWarnHtml}
         ${w.notes?`<div class="mt8 text-muted">${w.notes}</div>`:''}
         ${!(w.items||[]).length?'<div class="empty-state"><div class="ei">📝</div>No exercises logged yet</div>':''}
-      </div>`;
+      </div>
+      <div class="card">${buildKnowledgeReview(prof,w,exs,cardioItems,totalVol)}</div>`;
     }
     el.innerHTML=html;return;
   }
@@ -1693,8 +1946,6 @@ function renderReview(){
     if(e.cat==='push')pushSets+=(e.sets||[]).length;
     else if(e.cat==='pull')pullSets+=(e.sets||[]).length;
   }));
-  const workoutStyle=prof.training_method||'volume';
-
   // ── Personalised Stats + Nutrition (uses onboarding-computed values when available) ──
   const GOAL_LABELS_P={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Calisthenics',recomp:'Body Recomp'};
   const goalKey=prof.goal||null;
@@ -1841,11 +2092,11 @@ function renderReview(){
 
   // Goal-based training feedback (Source: goal_programs.md + health_guidelines_reference.md)
   const totalSetsAll=gymDays.reduce((n,[,v])=>n+(v.items||[]).filter(i=>i.kind==='lift').reduce((m,e)=>m+(e.sets||[]).length,0),0);
-  if(goalKey==='hypertrophy'||workoutStyle==='volume'||workoutStyle==='failure'){
+  if(goalKey==='hypertrophy'){
     const targetSetsP=Math.round((days/7)*10);
     if(totalSetsAll<targetSetsP)feedback.push({msg:`Volume check: ${totalSetsAll} total sets over ${days} days. Hypertrophy targets 10–20 sets/muscle/week (ACSM). Add more working sets or sessions.`,cls:'warn'});
     else feedback.push({msg:`Hypertrophy goal: ${totalSetsAll} sets logged. Target 6–15 reps with progressive overload — increase load when you complete all sets at the top of your rep range.`,cls:''});
-  } else if(goalKey==='strength'||workoutStyle==='strength'){
+  } else if(goalKey==='strength'){
     feedback.push({msg:'Strength goal: 1–6 reps on compound lifts (Squat, Deadlift, Bench, OHP) with 3–5 min rest. Apply linear progression (+2.5 kg upper / +5 kg lower per session). When you stall, switch to weekly wave progression.',cls:''});
   } else if(goalKey==='fat_loss'){
     feedback.push({msg:`Fat loss goal: preserve muscle with ≥ 2 resistance sessions/week. High protein (${safeProtMin}g+/day) is essential to prevent muscle loss in a deficit. Keep training intensity high even while reducing calories.`,cls:''});
@@ -1884,6 +2135,13 @@ function renderReview(){
     const deloadFound=Object.entries(ws).map(([d,v])=>[d,normalizeWorkout(v)]).filter(([d,v])=>d>=d8wkAgo&&v.type==='rest'&&(v.notes||'').toLowerCase().includes('deload')).length>0;
     if(!deloadFound)feedback.push({msg:'No deload week detected in the last 8 weeks. After 4–8 weeks of hard training, a planned deload (reduce volume 40–50% for 1 week) prevents overuse injuries and typically leads to better performance the following week.',cls:'warn'});
   }
+
+  // Discipline-specific feedback (Source: training_disciplines.md — combined with goal/consistency/push-pull/overtraining above)
+  const periodExs=gymDays.flatMap(([,v])=>(v.items||[]).filter(i=>i.kind==='lift'));
+  getDisciplines(prof).forEach(key=>{
+    const df=disciplineFeedback(key,{gymDays,cardioDays,totalSetsAll,exs:periodExs,days});
+    if(df)feedback.push(df);
+  });
 
   const summary=`<div class="card">
     <div class="card-title">Period Summary · ${days} Days</div>
@@ -2003,7 +2261,6 @@ function renderProfile(){
   const recs=prof.records||prof.weight_history||[];
   const latest=recs.length?recs[recs.length-1]:null;
   renderCharts();
-  renderProfChangeHistory();
 
   const sc=document.getElementById('prof-stats');
   if(latest||prof.weight_kg){
@@ -2041,10 +2298,10 @@ function renderProfile(){
     sc.innerHTML=`<div class="card-title">Current Stats</div><div class="empty-state">No measurements yet</div>`;
   }
 
-  const tm=prof.training_method||prof.workoutStyle||'volume';
-  document.querySelectorAll('#prof-style-btns .style-btn').forEach(b=>{
-    b.classList.toggle('active',b.dataset.style===tm);
-  });
+  const discBadges=document.getElementById('prof-disc-badges');
+  if(discBadges){
+    discBadges.innerHTML=getDisciplines(prof).map(k=>`<span class="badge badge-muscle" title="${DISCIPLINES[k]?.desc||''}">${DISCIPLINES[k]?.icon||''} ${DISCIPLINES[k]?.name||k}</span>`).join('');
+  }
 
   const bioEl=document.getElementById('bio-records');
   if(!recs.length){bioEl.innerHTML='<div class="text-muted">No measurements added yet</div>';document.getElementById('weight-chart-wrap').style.display='none';return}
@@ -2285,19 +2542,6 @@ function renderExChart(){
     : '';
 }
 
-function setStyle(style,btn){
-  const prof=getProfile();
-  const prev=prof.training_method||prof.workoutStyle;
-  if(prev===style)return; // no change
-  const METHOD_LABELS={failure:'Until Failure',volume:'Volume',strength:'Strength Focus',endurance:'Endurance'};
-  prof.training_method=style;
-  prof.workoutStyle=style;
-  if(!prof.profile_history)prof.profile_history=[];
-  prof.profile_history.push({date:todayStr(),changes:[`Training method: ${METHOD_LABELS[prev]||prev||'—'} → ${METHOD_LABELS[style]}`]});
-  rwSet('rw_profile',prof);
-  document.querySelectorAll('#prof-style-btns .style-btn').forEach(b=>b.classList.toggle('active',b.dataset.style===style));
-  renderProfChangeHistory();
-}
 function openAddBio(){
   const prof=getProfile();
   const latest=prof.records&&prof.records.length?prof.records[prof.records.length-1]:null;
@@ -2348,23 +2592,20 @@ function deleteBio(i){
 }
 
 // ─── Edit Profile ──────────────────────────────────────────────────────
-let EP={sex:null,goal:null,experience:null,equipment:null,training_method:null,days:3};
-
-function toggleEditProfile(){
-  const body=document.getElementById('edit-prof-body');
-  const chev=document.getElementById('edit-prof-chevron');
-  const open=body.style.display==='none';
-  body.style.display=open?'':'none';
-  chev.style.transform=open?'rotate(180deg)':'';
-  if(open)populateEditProfile();
+let EP={sex:null,goal:null,experience:null,equipment:null,disciplines:[],days:3};
+function epDiscToggle(key,el){
+  const i=EP.disciplines.indexOf(key);
+  if(i>=0)EP.disciplines.splice(i,1);else EP.disciplines.push(key);
+  el.classList.toggle('active');
 }
+
 function populateEditProfile(){
   const prof=getProfile();
   EP.sex=prof.sex||'male';
   EP.goal=prof.goal||null;
   EP.experience=prof.experience||null;
   EP.equipment=prof.equipment||null;
-  EP.training_method=prof.training_method||prof.workoutStyle||null;
+  EP.disciplines=[...getDisciplines(prof)];
   EP.days=prof.training_days||3;
   document.getElementById('ep-age').value=prof.age||'';
   document.getElementById('ep-height-label').textContent=`Height (${heightUnit()})`;
@@ -2377,12 +2618,14 @@ function populateEditProfile(){
   document.getElementById('ep-sex-m').classList.toggle('active',EP.sex==='male');
   document.getElementById('ep-sex-f').classList.toggle('active',EP.sex==='female');
   // Card grids
-  ['goal','experience','equipment','training_method'].forEach(field=>{
-    const gridId={goal:'ep-goal-grid',experience:'ep-exp-grid',equipment:'ep-equip-grid',training_method:'ep-method-grid'}[field];
+  ['goal','experience','equipment'].forEach(field=>{
+    const gridId={goal:'ep-goal-grid',experience:'ep-exp-grid',equipment:'ep-equip-grid'}[field];
     const grid=document.getElementById(gridId);
     if(!grid)return;
     grid.querySelectorAll('.ob-card').forEach(c=>c.classList.toggle('active',c.dataset.val===EP[field]));
   });
+  const discGrid=document.getElementById('ep-disc-grid');
+  if(discGrid)discGrid.innerHTML=disciplineCardsHtml(EP.disciplines,'epDiscToggle');
   renderProfChangeHistory();
 }
 function epSex(s){
@@ -2392,7 +2635,7 @@ function epSex(s){
 }
 function epCard(field,el){
   EP[field]=el.dataset.val;
-  const gridId={goal:'ep-goal-grid',experience:'ep-exp-grid',equipment:'ep-equip-grid',training_method:'ep-method-grid'}[field];
+  const gridId={goal:'ep-goal-grid',experience:'ep-exp-grid',equipment:'ep-equip-grid'}[field];
   document.getElementById(gridId).querySelectorAll('.ob-card').forEach(c=>c.classList.toggle('active',c===el));
 }
 function epDays(d){
@@ -2414,7 +2657,7 @@ function saveEditProfile(){
   if(!EP.goal)errs.push('Please select a goal');
   if(!EP.experience)errs.push('Please select an experience level');
   if(!EP.equipment)errs.push('Please select your equipment');
-  if(!EP.training_method)errs.push('Please select a training method');
+  if(!EP.disciplines.length)errs.push('Please select at least one training discipline');
   if(errs.length){errEl.textContent=errs[0];errEl.style.display='';return;}
   errEl.style.display='none';
 
@@ -2424,7 +2667,6 @@ function saveEditProfile(){
   const GOAL_LABELS={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Bodyweight',recomp:'Body Recomp'};
   const EXP_LABELS={beginner:'Beginner',novice:'Novice',intermediate:'Intermediate',advanced:'Advanced'};
   const EQUIP_LABELS={full_gym:'Full Gym',dumbbells:'Dumbbells',bodyweight:'Bodyweight',mixed:'Mixed'};
-  const METHOD_LABELS={failure:'Until Failure',volume:'Volume',strength:'Strength',endurance:'Endurance'};
   if(age!==prof.age)changes.push(`Age: ${prof.age||'—'} → ${age}`);
   if(height!==prof.height_cm)changes.push(`Height: ${prof.height_cm||'—'} → ${height} cm`);
   if(Math.abs(weight-(prof.weight_kg||0))>=0.1)changes.push(`Weight: ${prof.weight_kg||'—'} → ${weight} kg`);
@@ -2433,11 +2675,14 @@ function saveEditProfile(){
   if(EP.days!==prof.training_days)changes.push(`Training days: ${prof.training_days||'—'} → ${EP.days}/week`);
   if(EP.experience!==prof.experience)changes.push(`Experience: ${EXP_LABELS[prof.experience]||'—'} → ${EXP_LABELS[EP.experience]}`);
   if(EP.equipment!==prof.equipment)changes.push(`Equipment: ${EQUIP_LABELS[prof.equipment]||'—'} → ${EQUIP_LABELS[EP.equipment]}`);
-  if(EP.training_method!==(prof.training_method||prof.workoutStyle))changes.push(`Method: ${METHOD_LABELS[prof.training_method||prof.workoutStyle]||'—'} → ${METHOD_LABELS[EP.training_method]}`);
+  const prevDisc=getDisciplines(prof);
+  if(JSON.stringify([...prevDisc].sort())!==JSON.stringify([...EP.disciplines].sort())){
+    changes.push(`Disciplines: ${prevDisc.map(k=>DISCIPLINES[k]?.name||k).join(', ')||'—'} → ${EP.disciplines.map(k=>DISCIPLINES[k]?.name||k).join(', ')}`);
+  }
   if(rhr&&rhr!==prof.resting_hr)changes.push(`Resting HR: ${prof.resting_hr||'—'} → ${rhr} bpm`);
 
   // Build updated profile
-  const updated={...prof,age,height_cm:height,weight_kg:weight,sex:EP.sex,goal:EP.goal,training_days:EP.days,experience:EP.experience,equipment:EP.equipment,training_method:EP.training_method,workoutStyle:EP.training_method,barbell_available:EP.equipment!=='bodyweight',resting_hr:rhr||null};
+  const updated={...prof,age,height_cm:height,weight_kg:weight,sex:EP.sex,goal:EP.goal,training_days:EP.days,experience:EP.experience,equipment:EP.equipment,disciplines:[...EP.disciplines],barbell_available:EP.equipment!=='bodyweight',resting_hr:rhr||null};
   // Recompute derived values
   const derived=computeDerivedValues(updated);
   Object.assign(updated,derived);
@@ -2465,9 +2710,7 @@ function saveEditProfile(){
 
   rwSet('rw_profile',updated);
   renderProfile();
-  // Collapse the edit form
-  document.getElementById('edit-prof-body').style.display='none';
-  document.getElementById('edit-prof-chevron').style.transform='';
+  renderProfChangeHistory();
   // Show a brief confirmation
   const banner=document.createElement('div');
   banner.className='fb-item good';banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:999;white-space:nowrap;padding:10px 18px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3)';
@@ -2550,6 +2793,7 @@ function renderUnitButtons(){
 
 // ── Settings page render ────────────────────────────────────────────────
 function renderSettingsPage(){
+  populateEditProfile();
   const ns=getNS();
   const perm=('Notification' in window)?Notification.permission:'unsupported';
   const banner=document.getElementById('notif-banner');
