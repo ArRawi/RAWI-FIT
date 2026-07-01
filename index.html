@@ -204,20 +204,27 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
       <button class="ob-sex-btn" id="ob-sex-f" onclick="obSex('female',this)">♀ Female</button>
     </div>
     <div class="field" style="width:100%;max-width:360px">
+      <label>Which units do you prefer?</label>
+      <div class="ob-sex-toggle">
+        <button class="ob-sex-btn active" id="ob-unit-si" onclick="obUnit('si',this)">Metric (kg, cm)</button>
+        <button class="ob-sex-btn" id="ob-unit-uscs" onclick="obUnit('uscs',this)">Imperial (lb, ft)</button>
+      </div>
+    </div>
+    <div class="field" style="width:100%;max-width:360px">
       <label>Age</label>
       <input type="number" id="ob-age" placeholder="e.g. 25" min="13" max="100" oninput="obAgeHint()">
       <div class="ob-err" id="err-age">Please enter a valid age (13–100).</div>
       <div id="ob-youth" style="display:none;font-size:12px;color:var(--accent3);margin-top:4px">This app is designed for adults. If you're under 18, check with a parent or coach before starting a training program.</div>
     </div>
     <div class="field" style="width:100%;max-width:360px">
-      <label>Weight (kg)</label>
+      <label id="ob-weight-label">Weight (kg)</label>
       <input type="number" id="ob-weight" placeholder="e.g. 75" min="30" max="300" step="0.1">
-      <div class="ob-err" id="err-weight">Please enter a weight between 30 and 300 kg.</div>
+      <div class="ob-err" id="err-weight">Please enter a valid weight.</div>
     </div>
     <div class="field" style="width:100%;max-width:360px">
-      <label>Height (cm)</label>
+      <label id="ob-height-label">Height (cm)</label>
       <input type="number" id="ob-height" placeholder="e.g. 175" min="100" max="250">
-      <div class="ob-err" id="err-height">Please enter a height between 100 and 250 cm.</div>
+      <div class="ob-err" id="err-height">Please enter a valid height.</div>
     </div>
     <button class="btn btn-primary btn-block" style="max-width:360px" onclick="obNext(1)">Continue →</button>
   </div>
@@ -320,7 +327,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
         <div style="font-size:13px;font-weight:700;margin-bottom:2px">Set a weight target <span style="font-size:12px;font-weight:400;color:var(--muted)">(optional)</span></div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:10px">We'll track your progress and celebrate when you hit it.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="field" style="margin:0"><label>Target Weight (kg)</label><input type="number" id="ob-goal-kg" placeholder="e.g. 72" min="30" max="300" step="0.1"></div>
+          <div class="field" style="margin:0"><label id="ob-goal-kg-label">Target Weight (kg)</label><input type="number" id="ob-goal-kg" placeholder="e.g. 72" step="0.1"></div>
           <div class="field" style="margin:0"><label>Target Date</label><input type="date" id="ob-goal-date"></div>
         </div>
         <div class="ob-err" id="err-wgoal">Enter both a weight and date, or leave both empty.</div>
@@ -442,7 +449,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 
   <!-- Volume Trend -->
   <div class="card">
-    <div class="card-title">Volume Per Session (kg) — Last 15 Gym Sessions</div>
+    <div class="card-title" id="vol-chart-title">Volume Per Session (kg) — Last 15 Gym Sessions</div>
     <div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px">
       <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#7c6af7;display:inline-block"></span>Workout</span>
     </div>
@@ -489,8 +496,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
       <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Personal Info</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div class="field" style="margin:0"><label>Age</label><input type="number" id="ep-age" min="13" max="100" placeholder="e.g. 25"></div>
-        <div class="field" style="margin:0"><label>Height (cm)</label><input type="number" id="ep-height" min="100" max="250" placeholder="e.g. 175"></div>
-        <div class="field" style="margin:0"><label>Weight (kg)</label><input type="number" id="ep-weight" min="30" max="300" step="0.1" placeholder="e.g. 75"></div>
+        <div class="field" style="margin:0"><label id="ep-height-label">Height (cm)</label><input type="number" id="ep-height" placeholder="e.g. 175"></div>
+        <div class="field" style="margin:0"><label id="ep-weight-label">Weight (kg)</label><input type="number" id="ep-weight" step="0.1" placeholder="e.g. 75"></div>
         <div class="field" style="margin:0"><label>Resting HR (bpm)</label><input type="number" id="ep-rhr" min="30" max="120" placeholder="optional"></div>
       </div>
       <div style="margin-bottom:14px">
@@ -571,6 +578,15 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
     <button class="btn btn-primary" onclick="requestNotifPerm()">Enable Notifications</button>
   </div>
 
+  <!-- Units -->
+  <div class="card">
+    <div class="card-title">Units</div>
+    <div class="ob-sex-toggle" style="max-width:360px">
+      <button class="ob-sex-btn" id="set-unit-si" onclick="setUnitSystem('si')">Metric (kg, cm)</button>
+      <button class="ob-sex-btn" id="set-unit-uscs" onclick="setUnitSystem('uscs')">Imperial (lb, in)</button>
+    </div>
+  </div>
+
   <!-- Daily reminder -->
   <div class="card">
     <div class="card-title">Daily Reminder</div>
@@ -636,7 +652,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
     <div class="card-title">Weight Goal</div>
     <div id="goal-display"></div>
     <div id="goal-form">
-      <div class="field"><label>Target Weight (kg)</label><input type="number" id="goal-kg" placeholder="e.g. 75" min="30" max="300" step="0.1"></div>
+      <div class="field"><label id="goal-kg-label">Target Weight (kg)</label><input type="number" id="goal-kg" placeholder="e.g. 75" step="0.1"></div>
       <div class="field"><label>Target Date</label><input type="date" id="goal-date"></div>
       <button class="btn btn-primary btn-block" onclick="saveWeightGoal()">Set Goal</button>
     </div>
@@ -693,8 +709,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
       <button class="modal-close" onclick="closeModal('m-addbio')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field"><label>Weight (kg)</label><input type="number" id="bio-w" placeholder="e.g. 72.5" step="0.1"></div>
-      <div class="field"><label>Height (cm)</label><input type="number" id="bio-h" placeholder="e.g. 175"></div>
+      <div class="field"><label id="bio-w-label">Weight (kg)</label><input type="number" id="bio-w" placeholder="e.g. 72.5" step="0.1"></div>
+      <div class="field"><label id="bio-h-label">Height (cm)</label><input type="number" id="bio-h" placeholder="e.g. 175"></div>
       <div class="field"><label>Age</label><input type="number" id="bio-a" placeholder="e.g. 25"></div>
       <button class="btn btn-primary btn-block" onclick="saveBio()">Save Measurement</button>
     </div>
@@ -847,6 +863,23 @@ function getProfile(){
 }
 function fmt(n,dec=1){return isNaN(n)?'—':Number(n).toFixed(dec)}
 
+// ─── Units (SI/USCS preference) ─────────────────────────────────────────
+// rw_profile.unit_system: "si" (kg/cm) | "uscs" (lb/in). Storage stays in
+// canonical kg/cm always — this only affects input/display conversion.
+function getUnitSystem(){return(getProfile()||{}).unit_system==='uscs'?'uscs':'si'}
+function weightUnit(u){return(u||getUnitSystem())==='uscs'?'lb':'kg'}
+function heightUnit(u){return(u||getUnitSystem())==='uscs'?'in':'cm'}
+function kgToLb(kg){return kg*2.20462}
+function lbToKg(lb){return lb/2.20462}
+function cmToIn(cm){return cm/2.54}
+function inToCm(inch){return inch*2.54}
+// Convert a canonical kg/cm value to the user's preferred unit for display/input
+function dispWeight(kg,u){u=u||getUnitSystem();if(kg===null||kg===undefined||isNaN(kg))return'';return u==='uscs'?Math.round(kgToLb(kg)*10)/10:Math.round(kg*10)/10}
+function dispHeight(cm,u){u=u||getUnitSystem();if(cm===null||cm===undefined||isNaN(cm))return'';return u==='uscs'?Math.round(cmToIn(cm)):Math.round(cm)}
+// Convert a value entered in the user's preferred unit back to canonical kg/cm for storage
+function toKg(val,u){u=u||getUnitSystem();return u==='uscs'?lbToKg(val):val}
+function toCm(val,u){u=u||getUnitSystem();return u==='uscs'?inToCm(val):val}
+
 // ─── Derived values (onboarding_spec.md Part 6A) ───────────────────────
 function computeDerivedValues(profile){
   const hm=profile.height_cm/100;
@@ -960,7 +993,7 @@ function isProfileComplete(profile){
 }
 
 // ─── Onboarding state ──────────────────────────────────────────────────
-let OB={sex:'male',goal:null,experience:null,equipment:null,training_method:null,days:3,weight_goal:null};
+let OB={sex:'male',unit_system:'si',goal:null,experience:null,equipment:null,training_method:null,days:3,weight_goal:null};
 
 function obStep(n){
   document.querySelectorAll('.ob-step').forEach((s,i)=>s.classList.toggle('active',i===n-1));
@@ -972,6 +1005,15 @@ function obSex(val,btn){
   OB.sex=val;
   document.querySelectorAll('.ob-sex-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+}
+function obUnit(val,btn){
+  OB.unit_system=val;
+  document.querySelectorAll('#ob-unit-si,#ob-unit-uscs').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ob-weight-label').textContent=val==='uscs'?'Weight (lb)':'Weight (kg)';
+  document.getElementById('ob-height-label').textContent=val==='uscs'?'Height (in)':'Height (cm)';
+  document.getElementById('ob-weight').placeholder=val==='uscs'?'e.g. 165':'e.g. 75';
+  document.getElementById('ob-height').placeholder=val==='uscs'?'e.g. 69':'e.g. 175';
 }
 function obCard(type,el){
   OB[type]=el.dataset.val;
@@ -1000,13 +1042,17 @@ function obShowErr(id,show){
 function obNext(step){
   if(step===1){
     const a=+document.getElementById('ob-age').value;
-    const w=+document.getElementById('ob-weight').value;
-    const h=+document.getElementById('ob-height').value;
+    const wRaw=+document.getElementById('ob-weight').value;
+    const hRaw=+document.getElementById('ob-height').value;
+    // Convert entered value (in the chosen display unit) to canonical kg/cm before validating/storing
+    const w=toKg(wRaw,OB.unit_system);
+    const h=toCm(hRaw,OB.unit_system);
     let ok=true;
     obShowErr('err-age',!(a>=13&&a<=100));if(!(a>=13&&a<=100))ok=false;
     obShowErr('err-weight',!(w>=30&&w<=300));if(!(w>=30&&w<=300))ok=false;
     obShowErr('err-height',!(h>=100&&h<=250));if(!(h>=100&&h<=250))ok=false;
     if(!ok)return;
+    OB._weightKg=w;OB._heightCm=h;
     obStep(2);
   } else if(step===2){
     obShowErr('err-goal',!OB.goal);
@@ -1028,10 +1074,10 @@ function obNext(step){
     if(!ok)return;
     // Build profile and show summary
     const a=+document.getElementById('ob-age').value;
-    const w=+parseFloat(document.getElementById('ob-weight').value).toFixed(1);
-    const h=+document.getElementById('ob-height').value;
+    const w=+OB._weightKg.toFixed(1);
+    const h=Math.round(OB._heightCm);
     const rhrVal=rhr?+rhr:null;
-    const partial={age:a,sex:OB.sex,weight_kg:w,height_cm:h,goal:OB.goal,training_days:OB.days,experience:OB.experience,equipment:OB.equipment,training_method:OB.training_method,resting_hr:rhrVal,barbell_available:OB.equipment!=='bodyweight'};
+    const partial={age:a,sex:OB.sex,unit_system:OB.unit_system,weight_kg:w,height_cm:h,goal:OB.goal,training_days:OB.days,experience:OB.experience,equipment:OB.equipment,training_method:OB.training_method,resting_hr:rhrVal,barbell_available:OB.equipment!=='bodyweight'};
     const derived=computeDerivedValues(partial);
     const program=autoAssignProgram(OB.goal,OB.experience,OB.days,OB.equipment);
     const GOAL_LABELS={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Master Bodyweight',recomp:'Body Recomp'};
@@ -1053,6 +1099,7 @@ function obNext(step){
           <strong>${derived.hr_zones[z].low}–${derived.hr_zones[z].high} bpm</strong>
         </div>`).join('')}`;
     OB._partial=partial;OB._derived=derived;OB._program=program;
+    document.getElementById('ob-goal-kg-label').textContent=OB.unit_system==='uscs'?'Target Weight (lb)':'Target Weight (kg)';
     obStep(5);
   }
 }
@@ -1062,7 +1109,7 @@ function obFinish(){
   const wgDate=document.getElementById('ob-goal-date').value;
   if((!!wgKg)!==(!!wgDate)){obShowErr('err-wgoal',true);return;}
   obShowErr('err-wgoal',false);
-  OB.weight_goal=wgKg?{target:parseFloat(wgKg),date:wgDate,achieved:false}:null;
+  OB.weight_goal=wgKg?{target:toKg(parseFloat(wgKg),OB.unit_system),date:wgDate,achieved:false}:null;
   const p=OB._partial;const d=OB._derived;
   const uuid='rw-'+(Date.now().toString(36))+'-'+(Math.random().toString(36).slice(2,7));
   const profile={...p,...d,user_id:uuid,records:[{date:todayStr(),weight:p.weight_kg,height:p.height_cm,age:p.age}],weight_history:[{date:todayStr(),weight_kg:p.weight_kg}],last_logged:null,created_at:new Date().toISOString()};
@@ -1217,7 +1264,7 @@ function renderSets(ei){
     row.className='set-row';
     row.innerHTML=`<div class="set-num">${si+1}</div>
       <input class="set-input" type="number" value="${s.weight||''}" placeholder="${ex.bw?'BW':'0'}" min="0" oninput="updateSet(${ei},${si},'weight',this.value)">
-      <div class="set-unit" style="font-size:11px;color:var(--muted)">${ex.bw?'+kg':'kg'}</div>
+      <div class="set-unit" style="font-size:11px;color:var(--muted)">${ex.bw?'+':''}${weightUnit()}</div>
       <input class="set-input" type="number" value="${s.reps||''}" placeholder="reps" min="0" oninput="updateSet(${ei},${si},'reps',this.value)">`;
     el.appendChild(row);
   });
@@ -1411,7 +1458,8 @@ function showDetail(dateStr){
         (item.sets||[]).forEach((s,i)=>{
           const w2=parseFloat(s.weight)||0,r=parseFloat(s.reps)||0;
           totalVol+=w2*r;
-          const wLabel=item.bw?(w2?`+${w2} kg`:'BW'):`${w2} kg`;
+          const wu=weightUnit();
+          const wLabel=item.bw?(w2?`+${w2} ${wu}`:'BW'):`${w2} ${wu}`;
           html+=`<div style="display:flex;gap:12px;font-size:13px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border)">
             <span style="min-width:44px">Set ${i+1}</span><span>${wLabel}</span><span>×</span><span>${r} reps</span></div>`;
         });
@@ -1429,7 +1477,7 @@ function showDetail(dateStr){
       }
     });
     if(!(w.items||[]).length)html+=`<div class="text-muted">No exercises recorded</div>`;
-    if(totalVol>0)html+=`<div class="stat-box mt12" style="text-align:left"><span class="text-muted">Total volume</span> <strong>${totalVol.toLocaleString()} kg</strong></div>`;
+    if(totalVol>0)html+=`<div class="stat-box mt12" style="text-align:left"><span class="text-muted">Total volume</span> <strong>${totalVol.toLocaleString()} ${weightUnit()}</strong></div>`;
   }
 
   if(w.notes)html+=`<div style="margin-top:14px;background:var(--surface2);border-radius:10px;padding:12px;font-size:13px;color:var(--muted);line-height:1.6">"${w.notes}"</div>`;
@@ -1566,9 +1614,9 @@ function renderReview(){
           const prevW=Math.max(0,...(pe.sets||[]).map(s=>+s.weight||0));
           const curR=Math.max(0,...(e.sets||[]).map(s=>+s.reps||0));
           const prevR=Math.max(0,...(pe.sets||[]).map(s=>+s.reps||0));
-          if(curW>prevW)sigs.push(`<div class="fb-item good">▲ ${e.name}: +${curW-prevW} kg — Progressive overload achieved!</div>`);
+          if(curW>prevW)sigs.push(`<div class="fb-item good">▲ ${e.name}: +${curW-prevW} ${weightUnit()} — Progressive overload achieved!</div>`);
           else if(curR>prevR&&curW===prevW)sigs.push(`<div class="fb-item good">▲ ${e.name}: +${curR-prevR} reps — aim to add load next session.</div>`);
-          else if(curW<prevW)sigs.push(`<div class="fb-item warn">▼ ${e.name}: -${prevW-curW} kg — check sleep, nutrition, and recovery.</div>`);
+          else if(curW<prevW)sigs.push(`<div class="fb-item warn">▼ ${e.name}: -${prevW-curW} ${weightUnit()} — check sleep, nutrition, and recovery.</div>`);
         });
         if(sigs.length)progressHtml=`<div class="divider"></div><div class="card-title">Progress Signals</div>${sigs.join('')}`;
       }
@@ -1579,13 +1627,13 @@ function renderReview(){
         const rows=[];
         exs.forEach(e=>{
           const key=getStdKey(e.name);const rm=getBestSetRM(e);
-          if(key&&rm){const ratio=rm/bw;const ti=getStrengthTier(key,ratio);const gap=ti.nextRatio?Math.round(ti.nextRatio*bw-rm):0;rows.push(`<div style="margin-bottom:6px"><strong>${e.name}</strong>: est. 1RM <strong>${rm} kg</strong> · <span class="badge badge-muscle">${ti.tier}</span>${ti.next?` <span class="text-muted text-sm">+${gap} kg → ${ti.next}</span>`:' <span class="text-muted text-sm">Elite!</span>'}</div>`);}
+          if(key&&rm){const ratio=rm/bw;const ti=getStrengthTier(key,ratio);const gap=ti.nextRatio?Math.round(ti.nextRatio*bw-rm):0;rows.push(`<div style="margin-bottom:6px"><strong>${e.name}</strong>: est. 1RM <strong>${rm} ${weightUnit()}</strong> · <span class="badge badge-muscle">${ti.tier}</span>${ti.next?` <span class="text-muted text-sm">+${gap} ${weightUnit()} → ${ti.next}</span>`:' <span class="text-muted text-sm">Elite!</span>'}</div>`);}
           const n=e.name.toLowerCase(),mr=Math.max(0,...(e.sets||[]).map(s=>+s.reps||0));
           if(mr&&(n.includes('pull-up')||n.includes('pullup'))){const lv=mr>=20?'Advanced':mr>=10?'Intermediate':'Beginner';rows.push(`<div style="margin-bottom:6px"><strong>${e.name}</strong>: ${mr} reps · <span class="badge badge-muscle">${lv}</span></div>`);}
           if(mr&&n.includes('push-up')){const lv=mr>=30?'Intermediate':mr>=10?'Beginner':'Keep building';rows.push(`<div style="margin-bottom:6px"><strong>${e.name}</strong>: ${mr} reps · <span class="badge badge-muscle">${lv}</span></div>`);}
           if(mr&&n.includes('dip')){const lv=mr>=15?'Intermediate':mr>=5?'Beginner':'Keep building';rows.push(`<div style="margin-bottom:6px"><strong>${e.name}</strong>: ${mr} reps · <span class="badge badge-muscle">${lv}</span></div>`);}
         });
-        if(rows.length)benchHtml=`<div class="divider"></div><div class="card-title">Strength Benchmarks</div><div class="text-muted text-sm" style="margin-bottom:8px">Based on ${bw} kg BW · ${prof.sex==='female'?'Female':'Male'} standards (ExRx / Strength Level 2026)</div>${rows.join('')}`;
+        if(rows.length)benchHtml=`<div class="divider"></div><div class="card-title">Strength Benchmarks</div><div class="text-muted text-sm" style="margin-bottom:8px">Based on ${dispWeight(bw)} ${weightUnit()} BW · ${prof.sex==='female'?'Female':'Male'} standards (ExRx / Strength Level 2026)</div>${rows.join('')}`;
       }
       // Goal alignment: rep range check (Source: goal_programs.md)
       const GOAL_LABELS_T={fat_loss:'Lose Fat',hypertrophy:'Build Muscle',strength:'Get Stronger',endurance:'Improve Fitness',general_health:'Stay Healthy',calisthenics:'Calisthenics',recomp:'Body Recomp'};
@@ -1615,11 +1663,11 @@ function renderReview(){
           <div class="cardio-grid">${fields.map(f=>`<div class="stat-box"><div class="stat-val">${cd[f.key]||'—'}</div><div class="stat-lbl">${f.label}</div></div>`).join('')}</div>
           ${hrNote?`<div class="fb-item mt8">${hrNote}</div>`:''}`;
       });
-      const liftSummary=exs.length?exs.map(e=>`<div style="margin-bottom:8px"><strong>${e.name}</strong> <span class="badge badge-muscle">${e.muscle}</span><div class="text-muted text-sm mt8">${(e.sets||[]).map((s,i)=>`Set ${i+1}: ${s.weight||'BW'} ${e.bw?'+':' '}kg × ${s.reps||0} reps`).join(' · ')}</div></div>`).join('<div class="divider"></div>'):'';
+      const liftSummary=exs.length?exs.map(e=>`<div style="margin-bottom:8px"><strong>${e.name}</strong> <span class="badge badge-muscle">${e.muscle}</span><div class="text-muted text-sm mt8">${(e.sets||[]).map((s,i)=>`Set ${i+1}: ${s.weight||'BW'} ${e.bw?'+':' '}${weightUnit()} × ${s.reps||0} reps`).join(' · ')}</div></div>`).join('<div class="divider"></div>'):'';
       html=`<div class="card"><div class="card-title">Today — Workout</div>
         ${liftSummary}
-        ${exs.length&&totalVol>0?`<div class="divider"></div><div class="row"><span class="text-muted">Total Volume</span><span style="margin-left:auto;font-weight:700">${totalVol} kg</span></div>`:''}
-        ${volDiff!==null?`<div class="fb-item ${volDiff>=0?'good':'warn'} mt8">${volDiff>=0?'▲':'▼'} ${Math.abs(volDiff)} kg vs previous workout</div>`:''}
+        ${exs.length&&totalVol>0?`<div class="divider"></div><div class="row"><span class="text-muted">Total Volume</span><span style="margin-left:auto;font-weight:700">${totalVol} ${weightUnit()}</span></div>`:''}
+        ${volDiff!==null?`<div class="fb-item ${volDiff>=0?'good':'warn'} mt8">${volDiff>=0?'▲':'▼'} ${Math.abs(volDiff)} ${weightUnit()} vs previous workout</div>`:''}
         ${cardioHtml}${benchHtml}${progressHtml}${goalAlignHtml}${equipWarnHtml}
         ${w.notes?`<div class="mt8 text-muted">${w.notes}</div>`:''}
         ${!(w.items||[]).length?'<div class="empty-state"><div class="ei">📝</div>No exercises logged yet</div>':''}
@@ -1685,7 +1733,7 @@ function renderReview(){
         <div class="stat-box"><div class="stat-val">${bmi?fmt(bmi):'—'}</div><div class="stat-lbl">BMI · ${bmi?bmiCls:'—'}</div></div>
         <div class="stat-box"><div class="stat-val">${mhr} bpm</div><div class="stat-lbl">Max Heart Rate</div></div>
         <div class="stat-box"><div class="stat-val">${pMin}–${protG}g</div><div class="stat-lbl">Daily Protein (ISSN)</div></div>
-        <div class="stat-box"><div class="stat-val">${weight} kg</div><div class="stat-lbl">Current Weight</div></div>
+        <div class="stat-box"><div class="stat-val">${dispWeight(weight)} ${weightUnit()}</div><div class="stat-lbl">Current Weight</div></div>
       </div>
       <div class="card-title" style="margin-top:8px">Estimated Nutrition (Mifflin-St Jeor + ACSM)</div>
       <div class="stat-grid">
@@ -1729,8 +1777,8 @@ function renderReview(){
       const gap=ti.nextRatio?Math.round(ti.nextRatio*bw-rm):0;
       const cls=ti.tier==='Elite'||ti.tier==='Advanced'?'good':'';
       bRows.push(`<div class="fb-item ${cls}" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <div><strong>${LIFT_LBL[key]||name}</strong><div class="text-muted text-sm">Est. 1RM: ${rm} kg · ${fmt(ratio,2)}× BW</div></div>
-        <div style="text-align:right;flex-shrink:0"><span class="badge badge-muscle">${ti.tier}</span>${ti.next?`<div class="text-muted text-sm">+${gap} kg → ${ti.next}</div>`:''}</div>
+        <div><strong>${LIFT_LBL[key]||name}</strong><div class="text-muted text-sm">Est. 1RM: ${rm} ${weightUnit()} · ${fmt(ratio,2)}× BW</div></div>
+        <div style="text-align:right;flex-shrink:0"><span class="badge badge-muscle">${ti.tier}</span>${ti.next?`<div class="text-muted text-sm">+${gap} ${weightUnit()} → ${ti.next}</div>`:''}</div>
       </div>`);
     });
     if(calistBests.pullup>0){
@@ -1746,7 +1794,7 @@ function renderReview(){
       const lv=calistBests.dip>=15?'Intermediate':calistBests.dip>=5?'Beginner':'Keep building';
       bRows.push(`<div class="fb-item ${lv==='Intermediate'?'good':''}" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><strong>Dips</strong><div class="text-muted text-sm">Best: ${calistBests.dip} reps</div></div><div style="text-align:right;flex-shrink:0"><span class="badge badge-muscle">${lv}</span></div></div>`);
     }
-    if(bRows.length)strengthBenchHtml=`<div class="card"><div class="card-title">Strength Benchmarks</div><div class="text-muted text-sm" style="margin-bottom:10px">Based on ${bw} kg bodyweight · ${prof.sex==='female'?'Female':'Male'} standards (ExRx / Strength Level 2026)</div>${bRows.join('')}</div>`;
+    if(bRows.length)strengthBenchHtml=`<div class="card"><div class="card-title">Strength Benchmarks</div><div class="text-muted text-sm" style="margin-bottom:10px">Based on ${dispWeight(bw)} ${weightUnit()} bodyweight · ${prof.sex==='female'?'Female':'Male'} standards (ExRx / Strength Level 2026)</div>${bRows.join('')}</div>`;
   }
 
   // ── Feedback Engine ──
@@ -2006,7 +2054,7 @@ function renderProfile(){
     <div class="hist-item">
       <div style="flex:1">
         <div class="hist-date">${r.date}</div>
-        <div class="hist-meta">${r.weight} kg · ${r.height} cm · Age ${r.age}</div>
+        <div class="hist-meta">${dispWeight(r.weight)} ${weightUnit()} · ${dispHeight(r.height)} ${heightUnit()} · Age ${r.age}</div>
       </div>
       <button style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:4px 10px;font-size:13px" onclick="deleteBio(${recs.length-1-i})">🗑</button>
     </div>`).join('');
@@ -2184,6 +2232,8 @@ function allLoggedExercises(){
 
 function renderCharts(){
   const W=400,H=170,pT=22,pB=28,pL=36,pR=12;
+  const volTitle=document.getElementById('vol-chart-title');
+  if(volTitle)volTitle.textContent=`Volume Per Session (${weightUnit()}) — Last 15 Gym Sessions`;
 
   // Weekly frequency
   const freq=weeklyFreqData();
@@ -2228,8 +2278,8 @@ function renderExChart(){
   }
   const {wt,rp}=exPerfData(name);
   wEl.innerHTML=wt.length>=2
-    ? `<div class="chart-label">Best Set — Weight (kg)</div>`+makeSVG(svgLine(wt,'#7c6af7',W,H,pT,pB,pL,pR),W,H)
-    : (wt.length===1?`<div class="chart-label">Best Set — Weight (kg)</div>`+makeSVG(svgLine(wt,'#7c6af7',W,H,pT,pB,pL,pR),W,H):chartEmpty('Log this exercise in more sessions to see the trend'));
+    ? `<div class="chart-label">Best Set — Weight (${weightUnit()})</div>`+makeSVG(svgLine(wt,'#7c6af7',W,H,pT,pB,pL,pR),W,H)
+    : (wt.length===1?`<div class="chart-label">Best Set — Weight (${weightUnit()})</div>`+makeSVG(svgLine(wt,'#7c6af7',W,H,pT,pB,pL,pR),W,H):chartEmpty('Log this exercise in more sessions to see the trend'));
   rEl.innerHTML=rp.length>=1
     ? `<div class="chart-label">Best Set — Reps</div>`+makeSVG(svgLine(rp,'#5eead4',W,H,pT,pB,pL,pR),W,H)
     : '';
@@ -2251,18 +2301,22 @@ function setStyle(style,btn){
 function openAddBio(){
   const prof=getProfile();
   const latest=prof.records&&prof.records.length?prof.records[prof.records.length-1]:null;
+  const wLbl=document.getElementById('bio-w-label'),hLbl=document.getElementById('bio-h-label');
+  if(wLbl)wLbl.textContent=`Weight (${weightUnit()})`;
+  if(hLbl)hLbl.textContent=`Height (${heightUnit()})`;
   if(latest){
-    document.getElementById('bio-w').value=latest.weight||'';
-    document.getElementById('bio-h').value=latest.height||'';
+    document.getElementById('bio-w').value=dispWeight(latest.weight)||'';
+    document.getElementById('bio-h').value=dispHeight(latest.height)||'';
     document.getElementById('bio-a').value=latest.age||'';
   }
   openModal('m-addbio');
 }
 function saveBio(){
-  const w=+document.getElementById('bio-w').value;
-  const h=+document.getElementById('bio-h').value;
+  const wRaw=+document.getElementById('bio-w').value;
+  const hRaw=+document.getElementById('bio-h').value;
   const a=+document.getElementById('bio-a').value;
-  if(!w||!h||!a){alert('Please fill all fields');return}
+  if(!wRaw||!hRaw||!a){alert('Please fill all fields');return}
+  const w=toKg(wRaw),h=toCm(hRaw);
   const prof=getProfile();
   if(!prof.records)prof.records=[];
   if(!prof.weight_history)prof.weight_history=[];
@@ -2313,8 +2367,10 @@ function populateEditProfile(){
   EP.training_method=prof.training_method||prof.workoutStyle||null;
   EP.days=prof.training_days||3;
   document.getElementById('ep-age').value=prof.age||'';
-  document.getElementById('ep-height').value=prof.height_cm||'';
-  document.getElementById('ep-weight').value=prof.weight_kg||'';
+  document.getElementById('ep-height-label').textContent=`Height (${heightUnit()})`;
+  document.getElementById('ep-weight-label').textContent=`Weight (${weightUnit()})`;
+  document.getElementById('ep-height').value=dispHeight(prof.height_cm)||'';
+  document.getElementById('ep-weight').value=dispWeight(prof.weight_kg)||'';
   document.getElementById('ep-rhr').value=prof.resting_hr||'';
   document.getElementById('ep-days-val').textContent=EP.days;
   // Sex toggle
@@ -2346,14 +2402,14 @@ function epDays(d){
 function saveEditProfile(){
   const errEl=document.getElementById('ep-err');
   const age=+document.getElementById('ep-age').value;
-  const height=+document.getElementById('ep-height').value;
-  const weight=parseFloat(document.getElementById('ep-weight').value);
+  const height=toCm(+document.getElementById('ep-height').value);
+  const weight=toKg(parseFloat(document.getElementById('ep-weight').value));
   const rhr=document.getElementById('ep-rhr').value?+document.getElementById('ep-rhr').value:null;
-  // Validate
+  // Validate (canonical kg/cm bounds regardless of display unit)
   const errs=[];
   if(!age||age<13||age>100)errs.push('Age must be 13–100');
-  if(!height||height<100||height>250)errs.push('Height must be 100–250 cm');
-  if(!weight||weight<30||weight>300)errs.push('Weight must be 30–300 kg');
+  if(!height||height<100||height>250)errs.push('Height must be within a valid range');
+  if(!weight||weight<30||weight>300)errs.push('Weight must be within a valid range');
   if(rhr&&(rhr<30||rhr>120))errs.push('Resting HR must be 30–120 bpm');
   if(!EP.goal)errs.push('Please select a goal');
   if(!EP.experience)errs.push('Please select an experience level');
@@ -2475,6 +2531,23 @@ function saveNotifTog(key,val){
 }
 function saveNotifTime(val){const ns=getNS();ns.dailyTime=val;setNS(ns);}
 
+// ── Units ─────────────────────────────────────────────────────────────
+function setUnitSystem(val){
+  rwUpdate('rw_profile',p=>({...p,unit_system:val}));
+  renderUnitButtons();
+  renderGoalDisplay();
+  renderItemList(); // refresh set weight labels (kg/lb) on the log page
+  const goalKgLabel=document.getElementById('goal-kg-label');
+  if(goalKgLabel)goalKgLabel.textContent=`Target Weight (${weightUnit(val)})`;
+  if(document.getElementById('p-prof').classList.contains('active'))renderProfile();
+}
+function renderUnitButtons(){
+  const u=getUnitSystem();
+  const si=document.getElementById('set-unit-si'),us=document.getElementById('set-unit-uscs');
+  if(si)si.classList.toggle('active',u==='si');
+  if(us)us.classList.toggle('active',u==='uscs');
+}
+
 // ── Settings page render ────────────────────────────────────────────────
 function renderSettingsPage(){
   const ns=getNS();
@@ -2488,14 +2561,18 @@ function renderSettingsPage(){
   if(tw)tw.style.display=togs.daily!==false?'':'none';
   const dt=document.getElementById('daily-time');
   if(dt)dt.value=ns.dailyTime||'19:00';
+  renderUnitButtons();
+  const goalKgLabel=document.getElementById('goal-kg-label');
+  if(goalKgLabel)goalKgLabel.textContent=`Target Weight (${weightUnit()})`;
   renderGoalDisplay();
 }
 
 // ── Weight Goal ─────────────────────────────────────────────────────────
 function saveWeightGoal(){
-  const tw=parseFloat(document.getElementById('goal-kg').value);
+  const twRaw=parseFloat(document.getElementById('goal-kg').value);
   const td=document.getElementById('goal-date').value;
-  if(!tw||!td){return;}
+  if(!twRaw||!td){return;}
+  const tw=toKg(twRaw);
   const goals=getGoals();goals.weight={target:tw,date:td,achieved:false};setGoals(goals);
   renderGoalDisplay();
 }
@@ -2522,13 +2599,14 @@ function renderGoalDisplay(){
   }
   const daysLeft=g.date?Math.ceil((new Date(g.date+' 12:00')-new Date())/864e5):null;
   const dLabel=daysLeft===null?'':(daysLeft>0?`${daysLeft} days left`:(daysLeft===0?'Today!':'Overdue'));
+  const wu=weightUnit();
   el.innerHTML=`
     <div class="row" style="margin-bottom:6px">
-      <div><span class="text-muted">Target:</span> <strong>${g.target} kg</strong></div>
+      <div><span class="text-muted">Target:</span> <strong>${dispWeight(g.target)} ${wu}</strong></div>
       <div style="margin-left:auto;font-size:13px;color:var(--muted)">${dLabel}</div>
     </div>
     <div class="row" style="margin-bottom:4px">
-      <span class="text-muted text-sm">Current: ${cur||'—'} kg</span>
+      <span class="text-muted text-sm">Current: ${cur?dispWeight(cur):'—'} ${wu}</span>
       <span style="margin-left:auto;font-weight:700;color:var(--accent)">${pct}%</span>
     </div>
     <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
@@ -2705,9 +2783,9 @@ function _chkGoal(){
   const reached=Math.abs(diff)<=0.5||(g.target<startW?diff<=0:diff>=0);
   if(reached){
     const g2=getGoals();g2.weight.achieved=true;setGoals(g2);
-    fireNotif('Goal Achieved! 🎉',`You hit your target of ${g.target} kg! That's a real milestone — be proud of the consistency it took.`,'goal');
+    fireNotif('Goal Achieved! 🎉',`You hit your target of ${dispWeight(g.target)} ${weightUnit()}! That's a real milestone — be proud of the consistency it took.`,'goal');
     _markFired();
-    showCelebration('🎉','Goal Achieved!',`You hit your target weight of ${g.target} kg! Incredible consistency. What's the next goal?`);
+    showCelebration('🎉','Goal Achieved!',`You hit your target weight of ${dispWeight(g.target)} ${weightUnit()}! Incredible consistency. What's the next goal?`);
     return true;
   }
   return false;
@@ -2734,8 +2812,8 @@ function checkStrengthTierUp(prevItems,newItems){
     const oldTier=getStrengthTier(key,prev.rm/bw).tier;
     const newTier=getStrengthTier(key,newRm/bw).tier;
     if(oldTier!==newTier){
-      fireNotif('Strength Tier Up! 🏆',`${i.name} just hit ${newTier} level! Est. 1RM: ${newRm} kg. That puts you among serious lifters.`,'tier-up');
-      showCelebration('🏆',`${newTier} Level!`,`Your ${i.name} crossed into ${newTier} tier — est. 1RM ${newRm} kg. That's a real milestone.`);
+      fireNotif('Strength Tier Up! 🏆',`${i.name} just hit ${newTier} level! Est. 1RM: ${newRm} ${weightUnit()}. That puts you among serious lifters.`,'tier-up');
+      showCelebration('🏆',`${newTier} Level!`,`Your ${i.name} crossed into ${newTier} tier — est. 1RM ${newRm} ${weightUnit()}. That's a real milestone.`);
     }
   });
 }
