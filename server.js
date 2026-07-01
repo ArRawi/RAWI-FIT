@@ -96,7 +96,7 @@ const server = http.createServer((req, res) => {
   }
 
   // ── static files ──
-  let filePath = url === '/' ? '/fitness-tracker-no-ai.html' : url;
+  let filePath = url === '/' ? '/index.html' : url;
   const fullPath = path.join(DIR, filePath);
 
   // Security: prevent directory traversal
