@@ -3258,6 +3258,7 @@ function showBadge(text,color='var(--muted)'){
 // ── Queue current data into IDB, then request a background sync ──
 async function queueSync(){
   if(!('serviceWorker' in navigator))return;
+  if(!LS('rw_profile')?.user_id)return; // no identity yet — nothing to sync
   try{
     const db=await idbOpen();
     await idbPut(db,'pending',{
@@ -3312,8 +3313,10 @@ function applyServerData(data){
 // ── On page load: pull latest from server ──
 async function pullFromServer(){
   try{
+    const userId=LS('rw_profile')?.user_id;
+    if(!userId)return; // no identity yet — nothing to pull, and never pull someone else's data
     showBadge('↓ Checking sync…');
-    const res=await fetch('/api/sync',{cache:'no-store'});
+    const res=await fetch(`/api/sync?user_id=${encodeURIComponent(userId)}`,{cache:'no-store'});
     if(!res.ok)return;
     const data=await res.json();
     if(data&&data._ts)applyServerData(data);

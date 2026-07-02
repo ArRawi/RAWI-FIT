@@ -8,9 +8,11 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 
-const PORT      = process.env.PORT || 3000;
-const DIR       = __dirname;
-const DATA_FILE = path.join(DIR, 'backup.json');
+const PORT     = process.env.PORT || 3000;
+const DIR      = __dirname;
+const DATA_DIR = path.join(DIR, 'data');
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -23,13 +25,25 @@ const MIME = {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function readData() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
+// One file per user_id — every device must supply its own user_id so
+// syncs never merge into another person's data.
+const USER_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+function sanitizeUserId(id) {
+  return typeof id === 'string' && USER_ID_RE.test(id) ? id : null;
+}
+
+function dataFile(userId) {
+  return path.join(DATA_DIR, `${userId}.json`);
+}
+
+function readData(userId) {
+  try { return JSON.parse(fs.readFileSync(dataFile(userId), 'utf8')); }
   catch { return { workouts: {}, profile: null, _ts: 0 }; }
 }
 
-function writeData(obj) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(obj, null, 2));
+function writeData(userId, obj) {
+  fs.writeFileSync(dataFile(userId), JSON.stringify(obj, null, 2));
 }
 
 /**
@@ -65,29 +79,41 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  const url = req.url.split('?')[0];
+  const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const url       = parsedUrl.pathname;
 
-  // ── GET /api/sync ── pull latest backup
+  // ── GET /api/sync?user_id=... ── pull latest backup for this user only
   if (url === '/api/sync' && req.method === 'GET') {
-    const data = readData();
+    const userId = sanitizeUserId(parsedUrl.searchParams.get('user_id'));
+    if (!userId) {
+      res.writeHead(400); res.end(JSON.stringify({ error: 'Missing or invalid user_id' }));
+      return;
+    }
+    const data = readData(userId);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
     return;
   }
 
-  // ── POST /api/sync ── receive and merge data
+  // ── POST /api/sync ── receive and merge data, scoped to the sender's user_id
   if (url === '/api/sync' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', () => {
       try {
         const incoming = JSON.parse(body);
-        const stored   = readData();
-        const merged   = mergePayload(stored, incoming);
-        writeData(merged);
+        const userId   = sanitizeUserId(parsedUrl.searchParams.get('user_id'))
+          || sanitizeUserId(incoming.profile && incoming.profile.user_id);
+        if (!userId) {
+          res.writeHead(400); res.end(JSON.stringify({ error: 'Missing or invalid user_id' }));
+          return;
+        }
+        const stored = readData(userId);
+        const merged = mergePayload(stored, incoming);
+        writeData(userId, merged);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, data: merged }));
-        console.log(`[sync] ${new Date().toISOString()} — merged OK`);
+        console.log(`[sync] ${new Date().toISOString()} — merged OK for ${userId}`);
       } catch (e) {
         res.writeHead(400); res.end(JSON.stringify({ error: 'Bad JSON' }));
       }
