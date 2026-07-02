@@ -495,8 +495,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   <div class="card">
     <div class="row">
       <div class="card-title flex1" style="margin-bottom:0">Biometrics</div>
-      <button class="btn btn-ghost btn-sm" onclick="openAddBio()">+ Add Measurement</button>
     </div>
+    <div class="text-muted" style="font-size:12px;margin-top:-4px;margin-bottom:2px">Update weight, height, or age in Settings → Edit Profile.</div>
     <div class="mt12" id="weight-chart-wrap" style="display:none">
       <div class="chart-wrap"><svg id="weight-svg" viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg"></svg></div>
     </div>
@@ -713,21 +713,6 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
   </div>
 </div>
 
-<!-- Add Bio Modal -->
-<div class="modal-overlay" id="m-addbio">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title">Add Measurement</div>
-      <button class="modal-close" onclick="closeModal('m-addbio')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field"><label id="bio-w-label">Weight (kg)</label><input type="number" id="bio-w" placeholder="e.g. 72.5" step="0.1"></div>
-      <div class="field"><label id="bio-h-label">Height (cm)</label><input type="number" id="bio-h" placeholder="e.g. 175"></div>
-      <div class="field"><label>Age</label><input type="number" id="bio-a" placeholder="e.g. 25"></div>
-      <button class="btn btn-primary btn-block" onclick="saveBio()">Save Measurement</button>
-    </div>
-  </div>
-</div>
 
 <!-- Day Detail Modal -->
 <div class="modal-overlay" id="m-detail">
@@ -2683,47 +2668,6 @@ function renderExChart(){
     : '';
 }
 
-function openAddBio(){
-  const prof=getProfile();
-  const latest=prof.records&&prof.records.length?prof.records[prof.records.length-1]:null;
-  const wLbl=document.getElementById('bio-w-label'),hLbl=document.getElementById('bio-h-label');
-  if(wLbl)wLbl.textContent=`Weight (${weightUnit()})`;
-  if(hLbl)hLbl.textContent=`Height (${heightUnit()})`;
-  if(latest){
-    document.getElementById('bio-w').value=dispWeight(latest.weight)||'';
-    document.getElementById('bio-h').value=dispHeight(latest.height)||'';
-    document.getElementById('bio-a').value=latest.age||'';
-  }
-  openModal('m-addbio');
-}
-function saveBio(){
-  const wRaw=+document.getElementById('bio-w').value;
-  const hRaw=+document.getElementById('bio-h').value;
-  const a=+document.getElementById('bio-a').value;
-  if(!wRaw||!hRaw||!a){alert('Please fill all fields');return}
-  const w=toKg(wRaw),h=toCm(hRaw);
-  const prof=getProfile();
-  if(!prof.records)prof.records=[];
-  if(!prof.weight_history)prof.weight_history=[];
-  // Track what changed
-  const changes=[];
-  if(Math.abs(w-(prof.weight_kg||0))>=0.1)changes.push(`Weight: ${prof.weight_kg||'—'} → ${w} kg`);
-  if(h!==prof.height_cm)changes.push(`Height: ${prof.height_cm||'—'} → ${h} cm`);
-  if(a!==prof.age)changes.push(`Age: ${prof.age||'—'} → ${a}`);
-  prof.records.push({date:todayStr(),weight:w,height:h,age:a});
-  prof.weight_history.push({date:todayStr(),weight_kg:w});
-  // Update primary fields and recompute derived values
-  prof.weight_kg=w;prof.height_cm=h;prof.age=a;
-  const derived=computeDerivedValues(prof);
-  Object.assign(prof,derived);
-  if(changes.length){
-    if(!prof.profile_history)prof.profile_history=[];
-    prof.profile_history.push({date:todayStr(),changes});
-  }
-  rwSet('rw_profile',prof);
-  closeModal('m-addbio');
-  renderProfile();
-}
 function deleteBio(i){
   if(!confirm('Delete this measurement?'))return;
   const prof=getProfile();
