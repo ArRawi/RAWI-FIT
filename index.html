@@ -9,12 +9,12 @@
 <link rel="manifest" href="/manifest.json">
 <title>Rawi Fit v1.0.1</title>
 <style>
-:root{--bg:#0f0f13;--surface:#1a1a24;--surface2:#22222f;--border:#2e2e40;--accent:#7c6af7;--accent2:#5eead4;--accent3:#f97316;--red:#f43f5e;--rest:#a78bfa;--text:#e8e8f0;--muted:#7070a0;--success:#22c55e;--radius:14px;--nav:64px;--safe:env(safe-area-inset-bottom,0px)}
+:root{--bg:#0f0f13;--surface:#1a1a24;--surface2:#22222f;--border:#2e2e40;--accent:#7c6af7;--accent2:#5eead4;--accent3:#f97316;--red:#f43f5e;--rest:#a78bfa;--text:#e8e8f0;--muted:#7070a0;--success:#22c55e;--radius:14px;--nav:64px;--safe:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden}
 button{cursor:pointer;border:none;outline:none;font-family:inherit}
 input,textarea,select{font-family:inherit;outline:none}
-.page{display:none;flex-direction:column;padding:16px 16px calc(var(--nav) + var(--safe) + 16px);min-height:100dvh;animation:fadeIn .2s ease}
+.page{display:none;flex-direction:column;padding:calc(16px + var(--safe-top)) 16px calc(var(--nav) + var(--safe) + 16px);min-height:100dvh;animation:fadeIn .2s ease}
 .page.active{display:flex}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* Nav */
@@ -26,7 +26,7 @@ input,textarea,select{font-family:inherit;outline:none}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
 .card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
 /* Buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;transition:opacity .15s,transform .1s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;min-height:44px;border-radius:10px;font-size:14px;font-weight:600;transition:opacity .15s,transform .1s;touch-action:manipulation}
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
@@ -68,7 +68,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .modal-close{background:var(--surface2);border:none;color:var(--muted);font-size:18px;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .modal-body{overflow-y:auto;flex:1;padding:12px 16px}
 /* Onboarding */
-#onboard{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#onboard{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:24px;padding-top:max(24px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch}
 #onboard.show{display:flex}
 .ob-step{display:none;flex-direction:column;align-items:center;width:100%;max-width:360px;text-align:center}
 .ob-step.active{display:flex}
@@ -201,7 +201,7 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .goal-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:8px 0}
 .goal-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .5s}
 /* Celebration overlay */
-.cel-ov{display:none;position:fixed;inset:0;background:#000c;z-index:500;align-items:center;justify-content:center}
+.cel-ov{display:none;position:fixed;inset:0;background:#000c;z-index:500;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px}
 .cel-ov.show{display:flex}
 .cel-box{background:var(--surface);border-radius:20px;padding:32px 24px;max-width:320px;width:90%;text-align:center}
 </style>
@@ -2951,8 +2951,26 @@ function renderGoalDisplay(){
   form.style.display='none';
 }
 
+// ── Keep the SW's view of notification state fresh (it can't read localStorage) ──
+// Runs every time checkNotifications() does, so the periodic-sync check in sw.js
+// has an up-to-date snapshot to decide from even while the app is closed.
+async function snapshotForSW(){
+  if(!('serviceWorker' in navigator))return;
+  try{
+    const ns=getNS();
+    const ws=getWorkouts();
+    const dates=Object.keys(ws).sort();
+    const db=await idbOpen();
+    await idbPut(db,'notifSnapshot',{
+      lastWorkoutDate: dates.length?dates[dates.length-1]:null,
+      notif:{enabled:!!ns.enabled,toggles:ns.toggles||{},dailyTime:ns.dailyTime||'19:00',lastFired:ns.lastFired||null},
+    });
+  }catch(e){/* IDB unavailable — foreground checks still work */}
+}
+
 // ── Notification Check Engine ───────────────────────────────────────────
 function checkNotifications(){
+  snapshotForSW();
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const ns=getNS();
   if(!ns.enabled)return;
@@ -3327,13 +3345,32 @@ if('serviceWorker' in navigator){
         };
       };
 
-      // Listen for sync-complete messages from the SW
+      // Listen for messages from the SW
       navigator.serviceWorker.addEventListener('message',e=>{
         if(e.data?.type==='SYNC_COMPLETE'){
           applyServerData(e.data.data);
           showBadge('✓ Synced','var(--success)');
         }
+        if(e.data?.type==='NOTIF_FIRED'){
+          // SW fired a reminder while we were closed — mark it fired locally too,
+          // so the foreground checkNotifications() loop doesn't fire a duplicate today.
+          rwUpdate('rw_notif',n=>({...n,lastFired:e.data.lastFired}));
+        }
       });
+
+      // ── Periodic Background Sync: lets the SW fire the daily log reminder
+      // even while the app is closed. Chrome/Android-only, and only granted
+      // for installed PWAs with enough engagement — falls through silently
+      // everywhere else (iOS Safari, Firefox, non-installed browsers), where
+      // the foreground checkNotifications() interval remains the fallback.
+      if('periodicSync' in reg){
+        try{
+          const status=await navigator.permissions.query({name:'periodic-background-sync'});
+          if(status.state==='granted'){
+            await reg.periodicSync.register('daily-reminder',{minInterval:12*60*60*1000});
+          }
+        }catch(e){/* not supported on this browser */}
+      }
 
       // Pull on every page load (if server is reachable)
       pullFromServer();

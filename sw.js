@@ -2,7 +2,7 @@
  * Rawi Fit – Service Worker
  * Handles offline caching and background sync.
  */
-const CACHE     = 'rawifit-v1.1.0'; //
+const CACHE     = 'rawifit-v1.2.0'; //
 const SYNC_TAG  = 'workout-sync';
 const SYNC_URL  = '/api/sync';
 
@@ -53,6 +53,79 @@ self.addEventListener('sync', e => {
   if (e.tag === SYNC_TAG) {
     e.waitUntil(pushToServer());
   }
+});
+
+// ── Periodic Background Sync — fires the daily log reminder while the app
+// is closed. Chrome/Android-only (installed PWA + engagement heuristics);
+// browsers without support never fire this tag, so this is a bonus channel
+// on top of the foreground checkNotifications() loop, not a replacement.
+const REMINDER_TAG = 'daily-reminder';
+
+self.addEventListener('periodicsync', e => {
+  if (e.tag === REMINDER_TAG) {
+    e.waitUntil(checkDailyReminder());
+  }
+});
+
+async function checkDailyReminder() {
+  const db   = await openIDB();
+  const snap = await idbGet(db, 'notifSnapshot');
+  if (!snap || !snap.notif) return;
+
+  const ns = snap.notif;
+  if (!ns.enabled) return;
+  if (ns.toggles && ns.toggles.daily === false) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (ns.lastFired === today) return;
+  if (snap.lastWorkoutDate === today) return; // already logged today
+
+  const [h, m] = (ns.dailyTime || '19:00').split(':').map(Number);
+  const now = new Date();
+  if (now.getHours() < h || (now.getHours() === h && now.getMinutes() < m)) return;
+
+  const last = snap.lastWorkoutDate;
+  const daysSince = last
+    ? Math.round((new Date(today + ' 12:00') - new Date(last + ' 12:00')) / 864e5)
+    : 999;
+
+  // Day state machine — mirrors _chkDayState() in index.html (system_prompt.md Section 3)
+  let title, body;
+  if (daysSince >= 30) {
+    title = 'Welcome back to Rawi Fit \u{1F44B}';
+    body  = 'It’s been a while — that’s completely okay. Whenever you’re ready, we’ll start fresh. No pressure, no catching up needed.';
+  } else if (daysSince >= 14) {
+    title = 'Still here for you \u{1F499}';
+    body  = `It's been ${daysSince} days. No guilt — just here whenever you're ready to pick it back up.`;
+  } else if (daysSince >= 7) {
+    title = 'Heads up \u{1F4A1}';
+    body  = `After ${daysSince} days without training, the body starts to lose some gains. Even one session this week helps maintain your progress.`;
+  } else if (daysSince >= 3) {
+    title = 'Haven’t seen a log in a few days';
+    body  = 'Rest day, or did we miss something? Tap to log today’s session.';
+  } else {
+    title = 'Time to train? \u{1F4AA}';
+    body  = 'You haven’t logged today’s session yet. Tap to add it.';
+  }
+
+  await self.registration.showNotification(title, { body, icon: '/icon.png', tag: 'daily-reminder' });
+
+  snap.notif.lastFired = today;
+  await idbPut(db, 'notifSnapshot', snap);
+
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  clients.forEach(c => c.postMessage({ type: 'NOTIF_FIRED', lastFired: today }));
+}
+
+// ── Tapping a notification focuses/opens the app ────────────────────────────
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+      for (const c of clients) { if ('focus' in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
+    })
+  );
 });
 
 async function pushToServer() {
